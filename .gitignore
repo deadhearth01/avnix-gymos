@@ -1,0 +1,6 @@
+# local tooling
+.remember/
+.claude/
+.DS_Store
+# app (dev/.gitignore covers the rest)
+node_modules/
