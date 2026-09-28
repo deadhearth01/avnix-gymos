@@ -1,4 +1,7 @@
 import type { Metadata } from "next";
+import Link from "next/link";
+import { Logo } from "@/components/brand/logo";
+import { Preloader } from "@/components/brand/preloader";
 import { LoginForm } from "./login-form";
 import { AuthShowcase } from "./showcase";
 
@@ -10,14 +13,11 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
   const reason = typeof sp.reason === "string" ? sp.reason : undefined;
   return (
     <div className="grid min-h-dvh lg:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)]">
+      <Preloader />
       <div className="flex flex-col px-6 py-8 sm:px-10">
-        <div className="flex items-center gap-2.5">
-          <span className="grid size-8 place-items-center rounded-[9px] bg-primary text-sm font-bold text-white shadow-[inset_0_1px_0_rgb(255_255_255/0.25)]">
-            G
-          </span>
-          <span className="text-[15px] font-semibold tracking-tight">GymOS</span>
-          <span className="ml-1 rounded-md bg-muted px-1.5 py-0.5 text-[11px] font-medium text-muted-foreground">by AvniX</span>
-        </div>
+        <Link href="/" aria-label="GymOS home" className="w-fit">
+          <Logo />
+        </Link>
         <div className="flex flex-1 items-center justify-center py-12">
           <LoginForm next={next} reason={reason} />
         </div>

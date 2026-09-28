@@ -89,6 +89,14 @@ export function LeadsBoard({
   }
   const [q, setQ] = React.useState("");
   const [drag, setDrag] = React.useState<string | null>(null);
+  // The card that just changed column stays above the others while it animates across.
+  const [lifted, setLifted] = React.useState<string | null>(null);
+  const liftTimer = React.useRef<number | undefined>(undefined);
+  const lift = (id: string) => {
+    setLifted(id);
+    window.clearTimeout(liftTimer.current);
+    liftTimer.current = window.setTimeout(() => setLifted(null), 700);
+  };
   const [over, setOver] = React.useState<Status | null>(null);
   const [adding, setAdding] = React.useState(openNew);
   const [editing, setEditing] = React.useState<Lead | null>(null);
@@ -98,6 +106,7 @@ export function LeadsBoard({
 
   const move = async (lead: Lead, status: Status) => {
     if (lead.status === status) return;
+    lift(lead.id);
     if (status === "lost") return setLosing(lead);
     if (status === "joined") {
       if (!canConvert) return void notify.error("You can't convert leads.");
@@ -227,9 +236,11 @@ export function LeadsBoard({
                           setDrag(null);
                           setOver(null);
                         }}
+                        style={{ position: "relative", zIndex: lifted === l.id ? 30 : 1 }}
                         className={cn(
                           "group rounded-xl border bg-card p-3 shadow-[var(--shadow-card)] transition-shadow hover:shadow-[var(--shadow-float)]",
                           canEdit && "cursor-grab active:cursor-grabbing",
+                          lifted === l.id && "shadow-[var(--shadow-float)]",
                         )}
                       >
                         <div className="flex items-start gap-2.5">

@@ -4,11 +4,13 @@ import * as React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { AnimatePresence, motion } from "motion/react";
-import { ChevronsUpDown, PanelLeftClose, PanelLeft, Search, LifeBuoy, LogOut, ShieldCheck, Check, Volume2, Sparkles } from "lucide-react";
+import { ChevronsUpDown, Compass, PanelLeftClose, PanelLeft, Search, LifeBuoy, LogOut, ShieldCheck, Check, Volume2, Sparkles } from "lucide-react";
 import { AnimatedIcon } from "@/components/kit/animated-icon";
+import { LogoTile } from "@/components/brand/logo";
 import { PersonAvatar } from "@/components/kit/person-avatar";
 import { ThemeSwitch } from "@/components/shell/theme-switch";
 import { useCommandPalette } from "@/components/shell/command-palette";
+import { startTour } from "@/components/shell/onboarding-tour";
 import type { NavItem } from "@/components/shell/nav-config";
 import {
   DropdownMenu,
@@ -24,7 +26,7 @@ import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
 
 export type SidebarProps = {
-  brand: { name: string; subtitle?: string; logoUrl?: string | null; color?: string | null };
+  brand: { name: string; subtitle?: string; logoUrl?: string | null; color?: string | null; gymos?: boolean };
   sections: { section?: string; items: NavItem[] }[];
   footer?: NavItem[];
   counts?: Partial<Record<NonNullable<NavItem["countKey"]>, number>>;
@@ -83,7 +85,7 @@ export function Sidebar(props: SidebarProps) {
               type="button"
               className={cn("anim-host flex min-w-0 flex-1 items-center gap-2.5 rounded-xl p-1.5 text-left transition-colors hover:bg-muted", c && "flex-none")}
             >
-              <BrandMark name={brand.name} logoUrl={brand.logoUrl} color={brand.color} />
+              {brand.gymos ? <LogoTile size={32} /> : <BrandMark name={brand.name} logoUrl={brand.logoUrl} color={brand.color} />}
               {!c && (
                 <>
                   <span className="min-w-0 flex-1">
@@ -147,6 +149,7 @@ export function Sidebar(props: SidebarProps) {
         <button
           type="button"
           onClick={() => palette.setOpen(true)}
+          data-tour="search"
           className={cn(
             "anim-host flex h-9 w-full items-center gap-2 rounded-[10px] bg-muted/80 px-2.5 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground",
             c && "justify-center px-0",
@@ -240,13 +243,14 @@ export function Sidebar(props: SidebarProps) {
               />
             </div>
             <DropdownMenuSeparator />
-            <form action="/auth/signout" method="post">
-              <DropdownMenuItem asChild variant="destructive">
-                <button type="submit" className="w-full">
-                  <LogOut className="size-4" /> Sign out
-                </button>
+            {variant === "gym" && (
+              <DropdownMenuItem onSelect={() => window.setTimeout(startTour, 150)}>
+                <Compass className="size-4" /> Take the tour
               </DropdownMenuItem>
-            </form>
+            )}
+            <DropdownMenuItem variant="destructive" onSelect={() => void signOut()}>
+              <LogOut className="size-4" /> Sign out
+            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
@@ -276,7 +280,7 @@ function NavLink({
       {active && (
         <motion.span
           layoutId={`nav-active-${layoutGroup}`}
-          className="absolute inset-0 rounded-[10px] bg-primary shadow-[inset_0_1px_0_rgb(255_255_255/0.18),0_4px_12px_-4px_rgb(22_163_74/0.5)]"
+          className="absolute inset-0 rounded-[10px] bg-primary shadow-[inset_0_1px_0_rgb(255_255_255/0.18),0_4px_12px_-4px_color-mix(in_oklab,var(--primary)_50%,transparent)]"
           transition={{ type: "spring", stiffness: 520, damping: 40 }}
         />
       )}
@@ -314,13 +318,13 @@ function NavLink({
       {content}
     </a>
   ) : (
-    <Link href={item.href} className={cls} aria-current={active ? "page" : undefined} onClick={onNavigate} prefetch>
+    <Link href={item.href} className={cls} aria-current={active ? "page" : undefined} onClick={onNavigate}>
       {content}
     </Link>
   );
 
   return (
-    <li>
+    <li data-tour={`nav${item.href.startsWith("/") ? item.href.replace(/\//g, "-") : "-support"}`}>
       {collapsed ? (
         <Tooltip>
           <TooltipTrigger asChild>{link}</TooltipTrigger>
@@ -334,6 +338,15 @@ function NavLink({
       )}
     </li>
   );
+}
+
+/** POSTs to the sign-out route, then hard-navigates so no stale client state survives. */
+export async function signOut() {
+  try {
+    await fetch("/auth/signout", { method: "POST", redirect: "manual", credentials: "same-origin" });
+  } finally {
+    window.location.assign("/login");
+  }
 }
 
 export function BrandMark({ name, logoUrl, color, size = 32 }: { name: string; logoUrl?: string | null; color?: string | null; size?: number }) {

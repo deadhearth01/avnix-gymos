@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { ArrowDown, ArrowUp, Check, Copy, ExternalLink, Plus, Trash2, Upload } from "lucide-react";
+import { ArrowDown, ArrowUp, Check, Copy, ExternalLink, ImagePlus, Plus, Trash2, Upload } from "lucide-react";
 import { PageHeader } from "@/components/kit/page-header";
 import { Field, FormSection, AffixInput } from "@/components/forms/field";
 import { Button } from "@/components/ui/button";
@@ -10,8 +10,11 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { mediaUrl } from "@/lib/media";
+import { inr } from "@/lib/format";
+import { PHOTO_PRESETS, preset, type PhotoPreset } from "@/lib/site/presets";
 import { notify } from "@/lib/notify";
 import type { GymSite } from "@/lib/types";
+import { setPlanPriceAction } from "../_actions/plans";
 import { updateSiteAction, uploadSiteImageAction } from "../_actions/settings";
 
 type Props = {
@@ -25,10 +28,15 @@ type Props = {
   customDomainEnabled: boolean;
   publicUrl: string;
   previewUrl: string;
+  plans: SitePlan[];
+  canEditPrices: boolean;
 };
+type SitePlan = { id: string; name: string; type: string; price: number; sessions: number; durationDays: number };
 type Draft = { site: GymSite; siteEnabled: boolean };
 type UploadTarget = { kind: "hero" | "gallery" | "trainer"; index?: number };
 type PendingImage = { key: string; url: string; kind: UploadTarget["kind"]; index?: number };
+/** The editor column is narrow next to the preview, so sections stack until very wide screens. */
+const SECTION = "lg:grid-cols-1 lg:gap-5 2xl:grid-cols-[220px_minmax(0,1fr)] 2xl:gap-10";
 const ACCEPT = "image/png,image/jpeg,image/webp,image/avif";
 const ALLOWED = new Set(ACCEPT.split(","));
 
@@ -110,6 +118,8 @@ export function WebsiteEditor({
   customDomainEnabled,
   publicUrl,
   previewUrl,
+  plans,
+  canEditPrices,
 }: Props) {
   const router = useRouter();
   const [saved, setSaved] = React.useState<Draft>({ site: initialSite, siteEnabled: initialEnabled });
@@ -229,13 +239,19 @@ export function WebsiteEditor({
         crumbs={[{ label: "Home", href: "/dashboard" }, { label: "Website" }]}
       />
       <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_350px]">
-        <div className="surface min-w-0 px-5 sm:px-7">
-          <FormSection title="Hero" description="Introduce your gym in a few words.">
-            <Field label="Tagline" className="sm:col-span-2" hint={`${(site.tagline ?? "").length}/140 characters`}>
-              <Input maxLength={140} value={site.tagline ?? ""} placeholder="Stronger every day" onChange={(e) => patch({ tagline: e.target.value })} />
+        <div className="surface min-w-0 px-5 pt-7 sm:px-7">
+          <FormSection className={SECTION} title="Hero" description="The first thing visitors see. Keep the headline short and punchy.">
+            <Field label="Headline" className="sm:col-span-2" hint={`${(site.tagline ?? "").length}/60 · shown in large capitals`}>
+              <Input maxLength={60} value={site.tagline ?? ""} placeholder="Lift heavy. Leave lighter." onChange={(e) => patch({ tagline: e.target.value })} />
             </Field>
-            <Field label="About" className="sm:col-span-2">
-              <Textarea rows={5} maxLength={2000} value={site.about ?? ""} onChange={(e) => patch({ about: e.target.value })} />
+            <Field label="Supporting line" className="sm:col-span-2" hint={`${(site.heroText ?? "").length}/220 · one or two sentences under the headline`}>
+              <Textarea
+                rows={2}
+                maxLength={220}
+                value={site.heroText ?? ""}
+                placeholder="Coaching, serious equipment and people who notice when you don’t show up."
+                onChange={(e) => patch({ heroText: e.target.value })}
+              />
             </Field>
             <div className="grid gap-3 sm:col-span-2 sm:grid-cols-[1fr_1.4fr]">
               <ImageTile
@@ -245,14 +261,48 @@ export function WebsiteEditor({
                 onRemove={site.heroFileId ? () => patch({ heroFileId: undefined }) : undefined}
               />
               <ImageDrop
-                label={uploadCount ? "Uploading image…" : "Upload hero image"}
+                label={uploadCount ? "Uploading image…" : "Upload your own photo"}
                 disabled={uploadCount > 0}
                 onFiles={(files) => void upload(files, { kind: "hero" })}
               />
             </div>
+            <div className="sm:col-span-2">
+              <p className="mb-2 text-sm font-medium">Or pick a stock photo</p>
+              <div className="flex gap-2 overflow-x-auto pb-1">
+                {(Object.keys(PHOTO_PRESETS) as PhotoPreset[]).map((name) => {
+                  const id = preset(name);
+                  const active = site.heroFileId === id;
+                  return (
+                    <button
+                      key={name}
+                      type="button"
+                      aria-pressed={active}
+                      aria-label={`Use stock photo: ${PHOTO_PRESETS[name]}`}
+                      title={PHOTO_PRESETS[name]}
+                      onClick={() => patch({ heroFileId: id })}
+                      className={`relative h-16 w-24 shrink-0 overflow-hidden rounded-lg bg-muted bg-cover bg-center outline-offset-2 transition-shadow ${active ? "outline-2 outline-primary" : "hover:opacity-90"}`}
+                      style={{ backgroundImage: `url(/site-defaults/${name}-sm.webp)` }}
+                    >
+                      {active && (
+                        <span className="absolute top-1 right-1 grid size-5 place-items-center rounded-full bg-primary text-primary-foreground">
+                          <Check className="size-3" />
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+              <p className="mt-1.5 text-xs text-muted-foreground">No photo selected? Your site uses a strength-floor photo by default.</p>
+            </div>
           </FormSection>
 
-          <FormSection title="Amenities" description="Add up to 24 short highlights.">
+          <FormSection className={SECTION} title="About your gym" description="A short paragraph for the “The gym” section.">
+            <Field label="About" className="sm:col-span-2" hint={`${(site.about ?? "").length}/600`}>
+              <Textarea rows={4} maxLength={600} value={site.about ?? ""} onChange={(e) => patch({ about: e.target.value })} />
+            </Field>
+          </FormSection>
+
+          <FormSection className={SECTION} title="Amenities" description="Add up to 24 short highlights.">
             <div className="flex flex-wrap gap-2 sm:col-span-2">
               {amenities.map((item, i) => (
                 <span key={i} className="inline-flex items-center gap-2 rounded-full border bg-muted/40 px-3 py-1.5 text-sm">
@@ -282,7 +332,7 @@ export function WebsiteEditor({
             </form>
           </FormSection>
 
-          <FormSection title="Opening hours" description="Use one row for each day or group of days.">
+          <FormSection className={SECTION} title="Opening hours" description="Use one row for each day or group of days.">
             <div className="grid gap-3 sm:col-span-2">
               {hours.map((row, i) => (
                 <div key={i} className="grid grid-cols-[minmax(0,1fr)_100px_100px_32px] items-center gap-2 max-sm:grid-cols-[minmax(0,1fr)_90px_90px_32px]">
@@ -328,45 +378,72 @@ export function WebsiteEditor({
             </Button>
           </FormSection>
 
-          <FormSection title="Trainers" description="Show the people behind your gym. Drag in a portrait or browse.">
-            <div className="grid gap-4 sm:col-span-2">
+          <FormSection className={SECTION} title="Coaches" description="Shown as tilt cards. Portraits with a plain or transparent background look best.">
+            <div className="grid gap-3 sm:col-span-2">
               {trainers.map((trainer, i) => {
                 const pending = pendingImages.find((p) => p.kind === "trainer" && p.index === i);
+                const photo = pending?.url ?? mediaUrl(trainer.photoFileId, { width: 240, height: 300 });
+                const set = (patchT: Partial<typeof trainer>) => patch({ trainers: trainers.map((t, n) => (n === i ? { ...t, ...patchT } : t)) });
                 return (
-                  <div key={i} className="grid gap-3 rounded-xl border p-3 sm:grid-cols-[110px_1fr]">
-                    <div className="space-y-2">
-                      <ImageTile
-                        url={pending?.url ?? mediaUrl(trainer.photoFileId, { width: 240, height: 240 })}
-                        label={`${trainer.name || "Trainer"} portrait`}
-                        busy={!!pending}
-                        onRemove={
-                          trainer.photoFileId ? () => patch({ trainers: trainers.map((t, n) => (n === i ? { ...t, photoFileId: undefined } : t)) }) : undefined
-                        }
-                      />
-                      <ImageDrop label="Photo" disabled={uploadCount > 0} onFiles={(files) => void upload(files, { kind: "trainer", index: i })} />
-                    </div>
-                    <div className="grid content-start gap-3">
-                      <Field label="Name">
-                        <Input
-                          required
-                          maxLength={64}
-                          value={trainer.name}
-                          onChange={(e) => patch({ trainers: trainers.map((t, n) => (n === i ? { ...t, name: e.target.value } : t)) })}
+                  <div key={i} className="grid min-w-0 gap-4 rounded-xl border p-3 sm:grid-cols-[96px_minmax(0,1fr)]">
+                    <div className="flex gap-3 sm:flex-col">
+                      <label
+                        className={`relative block aspect-[4/5] w-24 shrink-0 cursor-pointer overflow-hidden rounded-lg border bg-muted/60 bg-cover bg-center ${uploadCount > 0 ? "pointer-events-none opacity-60" : "hover:border-primary"}`}
+                        style={photo ? { backgroundImage: `url(${photo})` } : undefined}
+                        aria-label={`Upload portrait for ${trainer.name || "coach"}`}
+                      >
+                        {!photo && (
+                          <span className="grid h-full place-items-center text-muted-foreground">
+                            <ImagePlus className="size-5" />
+                          </span>
+                        )}
+                        {pending && <span className="absolute inset-0 grid place-items-center bg-black/50 text-xs font-medium text-white">Uploading…</span>}
+                        <input
+                          type="file"
+                          accept={ACCEPT}
+                          className="sr-only"
+                          onChange={(e) => {
+                            void upload(Array.from(e.target.files ?? []), { kind: "trainer", index: i });
+                            e.target.value = "";
+                          }}
                         />
+                      </label>
+                      {trainer.photoFileId && !pending && (
+                        <Button type="button" variant="ghost" size="xs" className="w-fit" onClick={() => set({ photoFileId: undefined })}>
+                          Remove photo
+                        </Button>
+                      )}
+                    </div>
+                    <div className="grid min-w-0 content-start gap-3 sm:grid-cols-2">
+                      <Field label="Name">
+                        <Input required maxLength={64} value={trainer.name} onChange={(e) => set({ name: e.target.value })} />
                       </Field>
                       <Field label="Role">
+                        <Input maxLength={64} placeholder="Head coach, strength" value={trainer.role} onChange={(e) => set({ role: e.target.value })} />
+                      </Field>
+                      <Field label="Experience" optional>
                         <Input
-                          maxLength={64}
-                          value={trainer.role}
-                          onChange={(e) => patch({ trainers: trainers.map((t, n) => (n === i ? { ...t, role: e.target.value } : t)) })}
+                          maxLength={40}
+                          placeholder="8 years coaching"
+                          value={trainer.experience ?? ""}
+                          onChange={(e) => set({ experience: e.target.value })}
                         />
                       </Field>
-                      <div className="flex gap-1">
+                      <Field label="Instagram handle" optional>
+                        <AffixInput
+                          leading="@"
+                          maxLength={40}
+                          placeholder="coach.name"
+                          value={(trainer.instagram ?? "").replace(/^@/, "")}
+                          onChange={(e) => set({ instagram: e.target.value.replace(/^@/, "") })}
+                        />
+                      </Field>
+                      <div className="flex flex-wrap gap-1 sm:col-span-2">
                         <Button
                           type="button"
                           variant="ghost"
                           size="icon-sm"
-                          aria-label={`Move ${trainer.name || "trainer"} up`}
+                          aria-label={`Move ${trainer.name || "coach"} up`}
                           disabled={i === 0 || uploadCount > 0}
                           onClick={() => moveTrainer(i, -1)}
                         >
@@ -376,7 +453,7 @@ export function WebsiteEditor({
                           type="button"
                           variant="ghost"
                           size="icon-sm"
-                          aria-label={`Move ${trainer.name || "trainer"} down`}
+                          aria-label={`Move ${trainer.name || "coach"} down`}
                           disabled={i === trainers.length - 1 || uploadCount > 0}
                           onClick={() => moveTrainer(i, 1)}
                         >
@@ -386,6 +463,7 @@ export function WebsiteEditor({
                           type="button"
                           variant="destructive-soft"
                           size="sm"
+                          className="ml-auto"
                           disabled={uploadCount > 0}
                           onClick={() => patch({ trainers: trainers.filter((_, n) => n !== i) })}
                         >
@@ -401,14 +479,14 @@ export function WebsiteEditor({
               type="button"
               variant="outline"
               className="w-fit"
-              disabled={trainers.length >= 12 || uploadCount > 0}
+              disabled={trainers.length >= 6 || uploadCount > 0}
               onClick={() => patch({ trainers: [...trainers, { name: "", role: "" }] })}
             >
-              <Plus /> Add trainer
+              <Plus /> Add coach
             </Button>
           </FormSection>
 
-          <FormSection title="Gallery" description="Add up to 24 photos of your space and community.">
+          <FormSection className={SECTION} title="Gallery" description="Add up to 24 photos of your space and community.">
             <div className="grid grid-cols-2 gap-3 sm:col-span-2 sm:grid-cols-3">
               {gallery.map((id, i) => (
                 <ImageTile
@@ -434,7 +512,7 @@ export function WebsiteEditor({
             </div>
           </FormSection>
 
-          <FormSection title="FAQs" description="Answer common questions before visitors call.">
+          <FormSection className={SECTION} title="FAQs" description="Answer common questions before visitors call.">
             <div className="grid gap-4 sm:col-span-2">
               {faqs.map((faq, i) => (
                 <div key={i} className="grid gap-3 rounded-xl border p-3">
@@ -460,7 +538,7 @@ export function WebsiteEditor({
             </Button>
           </FormSection>
 
-          <FormSection title="Social links & map" description="Help visitors find and follow you.">
+          <FormSection className={SECTION} title="Social links & map" description="Help visitors find and follow you.">
             {(["instagram", "facebook", "youtube", "google"] as const).map((key) => (
               <Field key={key} label={key[0].toUpperCase() + key.slice(1)}>
                 <AffixInput
@@ -484,18 +562,26 @@ export function WebsiteEditor({
             </Field>
           </FormSection>
 
-          <FormSection title="Visibility" description="Control what visitors can see.">
+          <FormSection className={SECTION} title="Prices & trial" description="Choose what visitors can see and do.">
             <label className="flex items-center justify-between gap-4 rounded-xl border p-4 sm:col-span-2">
               <span>
                 <span className="block text-sm font-medium">Show prices</span>
-                <span className="text-xs text-muted-foreground">Display plan prices on your public site.</span>
+                <span className="text-xs text-muted-foreground">Off: plans are listed without prices and visitors are asked to enquire.</span>
               </span>
-              <Switch checked={!!site.showPrices} onCheckedChange={(checked) => patch({ showPrices: checked })} />
+              <Switch checked={site.showPrices !== false} onCheckedChange={(checked) => patch({ showPrices: checked })} />
             </label>
             <label className="flex items-center justify-between gap-4 rounded-xl border p-4 sm:col-span-2">
               <span>
+                <span className="block text-sm font-medium">Free trial booking</span>
+                <span className="text-xs text-muted-foreground">Off: trial buttons and the form are replaced with WhatsApp and call buttons.</span>
+              </span>
+              <Switch checked={site.showTrial !== false} onCheckedChange={(checked) => patch({ showTrial: checked })} />
+            </label>
+            <PlanPrices plans={plans} canEdit={canEditPrices} />
+            <label className="flex items-center justify-between gap-4 rounded-xl border p-4 sm:col-span-2">
+              <span>
                 <span className="block text-sm font-medium">Website live</span>
-                <span className="text-xs text-muted-foreground">Publish the site for visitors when you save.</span>
+                <span className="text-xs text-muted-foreground">Turn off to show a “back soon” page instead.</span>
               </span>
               <Switch checked={draft.siteEnabled} onCheckedChange={(checked) => setDraft((d) => ({ ...d, siteEnabled: checked }))} />
             </label>
@@ -504,24 +590,20 @@ export function WebsiteEditor({
 
         <aside className="space-y-4 xl:sticky xl:top-6">
           <div className="surface overflow-hidden">
-            <div className="px-4 py-3 text-xs font-semibold tracking-wide text-muted-foreground uppercase">Live preview</div>
+            <div className="px-4 py-3 text-xs font-medium text-muted-foreground">Preview</div>
             <div
               className="min-h-52 bg-cover bg-center"
               style={{
                 backgroundColor: brandColor,
-                backgroundImage: heroUrl ? `linear-gradient(0deg, rgba(0,0,0,.68), rgba(0,0,0,.08)), url(${heroUrl})` : undefined,
+                backgroundImage: `linear-gradient(0deg, rgba(0,0,0,.72), rgba(0,0,0,.1)), url(${heroUrl ?? "/site-defaults/hero-deadlift-sm.webp"})`,
               }}
             >
               <div className="flex min-h-52 flex-col justify-end p-5 text-white">
-                <p className="text-xs font-semibold tracking-widest uppercase opacity-80">{gymName}</p>
-                <h2 className="mt-2 text-2xl leading-tight font-semibold">{site.tagline || "Your gym, your story"}</h2>
-                <div className="mt-3 flex flex-wrap gap-1.5">
-                  {amenities.slice(0, 3).map((a, i) => (
-                    <span key={i} className="rounded-full bg-white/20 px-2 py-1 text-[11px] backdrop-blur">
-                      {a}
-                    </span>
-                  ))}
-                </div>
+                <p className="text-xs font-semibold opacity-80">{gymName}</p>
+                <h2 className="mt-2 font-display text-[28px] leading-[0.95] font-extrabold uppercase [font-stretch:75%]">
+                  {site.tagline || "Train hard. Train right."}
+                </h2>
+                {site.heroText && <p className="mt-2 line-clamp-2 text-xs text-white/80">{site.heroText}</p>}
               </div>
             </div>
             <div className="flex flex-wrap gap-2 p-4">
@@ -573,6 +655,78 @@ export function WebsiteEditor({
           </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+function planLength(plan: SitePlan) {
+  if (plan.type !== "duration") return `${plan.sessions} sessions`;
+  const months = Math.round(plan.durationDays / 30);
+  return months > 0 && Math.abs(plan.durationDays - months * 30) <= 5 ? `${months} mo` : `${plan.durationDays} days`;
+}
+
+/** Membership and PT prices, editable in place (saved immediately, independent of Publish). */
+function PlanPrices({ plans, canEdit }: { plans: SitePlan[]; canEdit: boolean }) {
+  const [prices, setPrices] = React.useState<Record<string, number>>(() => Object.fromEntries(plans.map((p) => [p.id, p.price])));
+  const [savingId, setSavingId] = React.useState<string | null>(null);
+  async function save(plan: SitePlan) {
+    const value = prices[plan.id];
+    if (value === plan.price || !Number.isFinite(value) || value < 0) return;
+    setSavingId(plan.id);
+    try {
+      const result = await setPlanPriceAction(plan.id, value);
+      if (result.ok) notify.success(`${plan.name}: ${inr(value)}`);
+      else {
+        notify.error(result.error);
+        setPrices((p) => ({ ...p, [plan.id]: plan.price }));
+      }
+    } finally {
+      setSavingId(null);
+    }
+  }
+  const groups = [
+    { label: "Memberships", rows: plans.filter((p) => p.type === "duration") },
+    { label: "Personal training", rows: plans.filter((p) => p.type !== "duration") },
+  ].filter((g) => g.rows.length);
+  return (
+    <div className="rounded-xl border sm:col-span-2">
+      <div className="flex flex-wrap items-baseline justify-between gap-2 border-b px-4 py-3">
+        <span className="text-sm font-medium">Membership & PT rates</span>
+        <a href="/plans" className="text-xs font-medium text-primary hover:underline">
+          Manage plans
+        </a>
+      </div>
+      {groups.length === 0 && <p className="px-4 py-4 text-sm text-muted-foreground">No active plans yet. Add plans to show pricing on your site.</p>}
+      {groups.map((group) => (
+        <div key={group.label} className="px-4 py-3">
+          <p className="mb-1 text-xs font-medium text-muted-foreground">{group.label}</p>
+          <ul className="divide-y">
+            {group.rows.map((plan) => (
+              <li key={plan.id} className="flex items-center gap-3 py-2">
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-sm font-medium">{plan.name}</span>
+                  {!plan.name.includes(String(plan.sessions || "~")) && <span className="text-xs text-muted-foreground">{planLength(plan)}</span>}
+                </span>
+                {canEdit ? (
+                  <AffixInput
+                    leading="₹"
+                    inputMode="numeric"
+                    aria-label={`Price for ${plan.name}`}
+                    className="w-32 tabular-nums"
+                    disabled={savingId === plan.id}
+                    value={String(prices[plan.id] ?? "")}
+                    onChange={(e) => setPrices((p) => ({ ...p, [plan.id]: Number(e.target.value.replace(/[^\d]/g, "")) }))}
+                    onBlur={() => void save(plan)}
+                    onKeyDown={(e) => e.key === "Enter" && (e.currentTarget as HTMLInputElement).blur()}
+                  />
+                ) : (
+                  <span className="text-sm font-medium tabular-nums">{inr(plan.price)}</span>
+                )}
+              </li>
+            ))}
+          </ul>
+        </div>
+      ))}
     </div>
   );
 }

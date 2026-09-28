@@ -11,6 +11,7 @@ import { DB_ID, T } from "../src/lib/appwrite/schema";
 import { createGym } from "../src/lib/services/platform";
 import { computeInvoice, paymentStatus, SAC_FITNESS } from "../src/lib/domain/gst";
 import { rowPermissions } from "../src/lib/data/repo";
+import { DEMO_SITE } from "./demo-site.mjs";
 
 const SLUG = "ironparadise";
 const OWNER = "owner+demo@avnix.in";
@@ -168,36 +169,7 @@ async function main() {
     rowId: gymId,
     data: {
       brandColor: "#16a34a",
-      site: JSON.stringify({
-        tagline: "Vizag's friendliest strength & fitness club",
-        about:
-          "Iron Paradise is a 6,000 sq ft training floor in MVP Colony with imported strength equipment, a dedicated cardio deck, certified coaches and personalised diet plans. Whether you're starting out or chasing a PR, we'll get you there.",
-        amenities: [
-          "Certified trainers",
-          "Imported strength equipment",
-          "Cardio deck",
-          "Personal training",
-          "Diet plans",
-          "Steam & lockers",
-          "Ample parking",
-          "Women-only batch",
-        ],
-        hours: [
-          { days: "Mon – Sat", open: "05:00", close: "22:00" },
-          { days: "Sunday", open: "06:00", close: "12:00" },
-        ],
-        trainers: [
-          { name: "Kiran Varma", role: "Head coach · Strength" },
-          { name: "Sravani Reddy", role: "Women's fitness & Zumba" },
-          { name: "Arjun Naidu", role: "Personal training" },
-        ],
-        faqs: [
-          { q: "Do you offer a free trial?", a: "Yes — book a free trial session online and a coach will show you around." },
-          { q: "Is there a women-only batch?", a: "Yes, 7–9 AM every weekday with a female trainer." },
-          { q: "Can I pause my membership?", a: "You can freeze your membership for travel or illness; your expiry date extends automatically." },
-        ],
-        showPrices: true,
-      }),
+      site: JSON.stringify(DEMO_SITE),
     },
   });
 

@@ -10,8 +10,8 @@ import { TabsBar, useTabParam } from "@/components/kit/tabs-bar";
 import { Tag, type Tone } from "@/components/kit/badges";
 import { PersonAvatar } from "@/components/kit/person-avatar";
 import { AnimatedIcon } from "@/components/kit/animated-icon";
-import { AnimatedNumber, Stagger, StaggerItem, HoverLift } from "@/components/kit/motion";
-import { Delta } from "@/components/kit/badges";
+import { Stagger, StaggerItem } from "@/components/kit/motion";
+import { StatCard } from "@/components/kit/stat-card";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { fmtDate, fmtDateTime, fmtPhone, inr, pct } from "@/lib/format";
@@ -470,21 +470,7 @@ export function BillingView({
 }
 
 function Kpi({ icon, label, value, hint, delta }: { icon: typeof Wallet; label: string; value: number; hint?: string; delta?: number }) {
-  return (
-    <HoverLift className="surface flex flex-col gap-3 p-4 sm:p-5">
-      <span className="grid size-9 place-items-center rounded-[10px] border bg-card text-foreground/80 shadow-[var(--shadow-card)]">
-        <AnimatedIcon icon={icon} className="size-[18px]" />
-      </span>
-      <div>
-        <p className="truncate text-[13px] text-muted-foreground">{label}</p>
-        <div className="mt-1 flex flex-wrap items-center gap-2">
-          <AnimatedNumber value={value} fmt="inr" className="text-[24px] leading-none font-semibold tracking-[-0.02em]" />
-          {delta != null && delta !== 0 && <Delta value={delta} />}
-        </div>
-        {hint && <p className="mt-2 text-xs text-muted-foreground">{hint}</p>}
-      </div>
-    </HoverLift>
-  );
+  return <StatCard icon={icon} label={label} value={value} fmt="inr" hint={hint} delta={delta} />;
 }
 
 /** Search a member, then jump to their profile with the collect dialog open. */

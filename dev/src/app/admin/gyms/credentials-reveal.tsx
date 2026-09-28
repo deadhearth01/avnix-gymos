@@ -108,7 +108,7 @@ function RevealDialog({ data, open, onOpenChange }: { data: RevealData; open: bo
             initial={{ scale: 0.4, rotate: -20, opacity: 0 }}
             animate={{ scale: 1, rotate: 0, opacity: 1 }}
             transition={{ type: "spring", stiffness: 260, damping: 16 }}
-            className="grid size-11 place-items-center rounded-2xl bg-primary text-primary-foreground shadow-[0_8px_24px_-8px_rgb(22_163_74/0.6)]"
+            className="grid size-11 place-items-center rounded-2xl bg-primary text-primary-foreground shadow-[0_8px_24px_-8px_color-mix(in_oklab,var(--primary)_60%,transparent)]"
           >
             <KeyRound className="size-5" />
           </motion.span>

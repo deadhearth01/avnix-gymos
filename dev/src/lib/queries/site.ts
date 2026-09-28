@@ -5,6 +5,7 @@ import { adminClient } from "@/lib/appwrite/server";
 import { BUCKETS, DB_ID, T } from "@/lib/appwrite/schema";
 import { repo } from "@/lib/data/repo";
 import { env } from "@/lib/env";
+import { presetUrl } from "@/lib/site/presets";
 import type { Gym, GymSite, Plan } from "@/lib/types";
 
 export async function resolveSite(site: string): Promise<Gym | null> {
@@ -41,6 +42,8 @@ export async function sitePlans(gymId: string): Promise<Plan[]> {
 
 export function mediaUrl(fileId: string | null | undefined, width?: number): string | null {
   if (!fileId) return null;
+  const bundled = presetUrl(fileId, (width ?? 2000) <= 700 ? "sm" : "lg");
+  if (bundled) return bundled;
   const { APPWRITE_ENDPOINT, APPWRITE_PROJECT_ID } = env();
   const base = `${APPWRITE_ENDPOINT.replace(/\/$/, "")}/storage/buckets/${BUCKETS.gymMedia}/files/${encodeURIComponent(fileId)}`;
   return width

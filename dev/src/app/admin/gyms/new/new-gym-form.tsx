@@ -26,6 +26,7 @@ type Errors = Record<string, string[] | undefined>;
 export function NewGymForm() {
   const router = useRouter();
   const [f, setF] = React.useState({
+    onboarding: true,
     name: "",
     slug: "",
     city: "Visakhapatnam",
@@ -91,12 +92,13 @@ export function NewGymForm() {
     e.preventDefault();
     setErrors({});
     const payload: CreateGymPayload = {
+      onboarding: f.onboarding,
       name: f.name,
       slug,
       city: f.city,
-      address: f.address,
-      phone: f.phone,
-      gstin: f.gstin,
+      address: f.onboarding ? "" : f.address,
+      phone: f.onboarding ? "" : f.phone,
+      gstin: f.onboarding ? "" : f.gstin,
       owner: { name: f.ownerName, email: f.ownerEmail, phone: f.ownerPhone },
       subscription: {
         planName: f.planName,
@@ -121,7 +123,7 @@ export function NewGymForm() {
         return;
       }
       const d = r.data!;
-      notify.success(`${f.name} is live 🎉`);
+      notify.success(f.onboarding ? `${f.name} created — the owner will finish setup on first sign-in` : `${f.name} is live 🎉`);
       if (d.domainWarning) notify.warning(d.domainWarning);
       if (d.emailError) notify.warning(`Couldn't email the owner: ${d.emailError}`);
       setCreated(d.gymId);
@@ -145,7 +147,46 @@ export function NewGymForm() {
     <>
       <form onSubmit={submit} className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_340px]" noValidate>
         <div className="surface px-5 py-7 sm:px-7">
-          <FormSection title="Gym" description="How the gym appears on invoices, its website and in the owner's dashboard.">
+          <FormSection title="Who sets it up?" description="Let the owner fill in their own details, or do the full setup yourself.">
+            <div className="grid gap-2 sm:col-span-2 sm:grid-cols-2" role="radiogroup" aria-label="Setup mode">
+              {(
+                [
+                  [
+                    true,
+                    "Owner onboarding",
+                    "The owner gets a guided setup on first sign-in: details, prices, timings and website. The site goes live when they finish.",
+                  ],
+                  [false, "I’ll set it up", "You enter everything now. The owner signs in to a ready gym and the website is live immediately."],
+                ] as const
+              ).map(([value, title, body]) => (
+                <button
+                  key={title}
+                  type="button"
+                  role="radio"
+                  aria-checked={f.onboarding === value}
+                  onClick={() => set("onboarding", value)}
+                  className={`rounded-xl border p-4 text-left transition-[border-color,box-shadow] ${f.onboarding === value ? "border-primary ring-3 ring-primary/15" : "hover:border-foreground/25"}`}
+                >
+                  <span className="flex items-center justify-between gap-2 text-sm font-semibold">
+                    {title}
+                    <span className={`grid size-4 place-items-center rounded-full border ${f.onboarding === value ? "border-primary bg-primary" : ""}`}>
+                      {f.onboarding === value && <span className="size-1.5 rounded-full bg-primary-foreground" />}
+                    </span>
+                  </span>
+                  <span className="mt-1 block text-xs leading-relaxed text-muted-foreground">{body}</span>
+                </button>
+              ))}
+            </div>
+          </FormSection>
+
+          <FormSection
+            title="Gym"
+            description={
+              f.onboarding
+                ? "Just the basics — the owner adds the rest during onboarding."
+                : "How the gym appears on invoices, its website and in the owner's dashboard."
+            }
+          >
             <Field label="Gym name" required error={err("name")} className="sm:col-span-2">
               <Input value={f.name} onChange={(e) => set("name", e.target.value)} placeholder="Iron Paradise Fitness" autoFocus maxLength={128} />
             </Field>
@@ -215,21 +256,25 @@ export function NewGymForm() {
             <Field label="City" error={err("city")}>
               <Input value={f.city} onChange={(e) => set("city", e.target.value)} placeholder="Visakhapatnam" />
             </Field>
-            <Field label="Gym phone" optional error={err("phone")}>
-              <AffixInput leading="+91" value={f.phone} onChange={(e) => set("phone", e.target.value)} inputMode="tel" placeholder="98765 43210" />
-            </Field>
-            <Field label="Address" optional error={err("address")} className="sm:col-span-2">
-              <Input value={f.address} onChange={(e) => set("address", e.target.value)} placeholder="Door no, street, area" />
-            </Field>
-            <Field label="GSTIN" optional error={err("gstin")} hint="Used on member invoices. State code is read from it." className="sm:col-span-2">
-              <Input
-                value={f.gstin}
-                onChange={(e) => set("gstin", e.target.value.toUpperCase())}
-                placeholder="37ABCDE1234F1Z5"
-                maxLength={15}
-                className="font-mono uppercase"
-              />
-            </Field>
+            {!f.onboarding && (
+              <>
+                <Field label="Gym phone" optional error={err("phone")}>
+                  <AffixInput leading="+91" value={f.phone} onChange={(e) => set("phone", e.target.value)} inputMode="tel" placeholder="98765 43210" />
+                </Field>
+                <Field label="Address" optional error={err("address")} className="sm:col-span-2">
+                  <Input value={f.address} onChange={(e) => set("address", e.target.value)} placeholder="Door no, street, area" />
+                </Field>
+                <Field label="GSTIN" optional error={err("gstin")} hint="Used on member invoices. State code is read from it." className="sm:col-span-2">
+                  <Input
+                    value={f.gstin}
+                    onChange={(e) => set("gstin", e.target.value.toUpperCase())}
+                    placeholder="37ABCDE1234F1Z5"
+                    maxLength={15}
+                    className="font-mono uppercase"
+                  />
+                </Field>
+              </>
+            )}
           </FormSection>
 
           <FormSection title="Owner login" description="We create the owner's account with a strong one-time password. They'll be asked to change it.">

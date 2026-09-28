@@ -34,7 +34,7 @@ export function Stagger({ className, children, ...props }: HTMLMotionProps<"div"
   );
 }
 export function StaggerItem({ className, ...props }: HTMLMotionProps<"div">) {
-  return <motion.div variants={staggerChild} className={className} {...props} />;
+  return <motion.div variants={staggerChild} className={cn("h-full", className)} {...props} />;
 }
 
 /** Counts up to `value` when scrolled into view; re-animates on change. */

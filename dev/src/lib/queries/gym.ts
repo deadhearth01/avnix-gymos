@@ -10,8 +10,8 @@ type Stat = Models.Row & { day: string; checkins: number; revenue: number; payme
 
 const TZ = "Asia/Kolkata";
 const monthKey = (d: Date) => new Intl.DateTimeFormat("en-CA", { timeZone: TZ, year: "numeric", month: "2-digit" }).format(d);
-const monthLabel = (d: Date) => new Intl.DateTimeFormat("en-IN", { timeZone: TZ, month: "short" }).format(d);
-const dayLabel = (d: Date, opts: Intl.DateTimeFormatOptions) => new Intl.DateTimeFormat("en-IN", { timeZone: TZ, ...opts }).format(d);
+const monthLabel = (d: Date) => new Intl.DateTimeFormat("en-IN", { timeZone: TZ, month: "short" }).format(d).replace("Sept", "Sep");
+const dayLabel = (d: Date, opts: Intl.DateTimeFormatOptions) => new Intl.DateTimeFormat("en-IN", { timeZone: TZ, ...opts }).format(d).replace("Sept", "Sep");
 
 export async function dashboardData(gymId: string) {
   const r = repo(gymId);

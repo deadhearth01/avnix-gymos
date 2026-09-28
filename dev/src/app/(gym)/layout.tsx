@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
 import { Query } from "node-appwrite";
 import { KeyRound } from "lucide-react";
 import { AppShell } from "@/components/shell/app-shell";
@@ -9,11 +10,16 @@ import { adminClient } from "@/lib/appwrite/server";
 import { DB_ID, T } from "@/lib/appwrite/schema";
 import { repo } from "@/lib/data/repo";
 import { mediaUrl } from "@/lib/media";
+import { brandThemeCss } from "@/lib/brand-theme";
+import { Preloader } from "@/components/brand/preloader";
+import { OnboardingTour } from "@/components/shell/onboarding-tour";
 import type { Gym } from "@/lib/types";
-import { exitImpersonationAction, realtimeTokenAction, searchAction, switchGymAction } from "./_actions/common";
+import { exitImpersonationAction, markTourSeenAction, realtimeTokenAction, searchAction, switchGymAction } from "./_actions/common";
 
 export default async function GymLayout({ children }: { children: React.ReactNode }) {
   const ctx = await getGymContext();
+  // Owners created with "owner onboarding" finish the guided setup before using the workspace.
+  if ((ctx.user.prefs as { onboardingGymId?: string })?.onboardingGymId === ctx.gymId && ctx.role === "owner" && !ctx.impersonating) redirect("/onboarding");
   const r = repo(ctx.gymId);
   const now = new Date().toISOString();
   const [collapsed, members, leads, outbox, gyms] = await Promise.all([
@@ -37,7 +43,9 @@ export default async function GymLayout({ children }: { children: React.ReactNod
           .then((x) => x.rows)
       : Promise.resolve([] as Gym[]),
   ]);
-  const mustChange = !!(ctx.user.prefs as { mustChangePassword?: boolean })?.mustChangePassword && !ctx.impersonating;
+  const prefs = (ctx.user.prefs ?? {}) as { mustChangePassword?: boolean; tours?: unknown };
+  const mustChange = !!prefs.mustChangePassword && !ctx.impersonating;
+  const toursSeen = Array.isArray(prefs.tours) ? prefs.tours.filter((t): t is string => typeof t === "string") : [];
 
   return (
     <AppShell
@@ -58,6 +66,10 @@ export default async function GymLayout({ children }: { children: React.ReactNod
       search={searchAction}
       initialCollapsed={collapsed}
     >
+      {/* gym brand colour → whole workspace (validated hex only) */}
+      <style dangerouslySetInnerHTML={{ __html: brandThemeCss(ctx.gym.brandColor) }} />
+      <Preloader />
+      <OnboardingTour seen={toursSeen} enabled={!ctx.impersonating} markSeen={markTourSeenAction} />
       <RealtimeProvider getToken={realtimeTokenAction}>
         {mustChange && (
           <div className="mb-5 flex flex-col gap-3 rounded-2xl border border-primary/25 bg-success-soft/50 p-4 sm:flex-row sm:items-center print:hidden">

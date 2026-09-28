@@ -60,7 +60,7 @@ export async function adminOverview() {
   const now = new Date();
   const months = Array.from({ length: 12 }, (_, k) => {
     const d = new Date(now.getFullYear(), now.getMonth() - 11 + k, 1);
-    return { key: `${d.getFullYear()}-${d.getMonth()}`, label: d.toLocaleString("en-IN", { month: "short" }), billed: 0, collected: 0 };
+    return { key: `${d.getFullYear()}-${d.getMonth()}`, label: d.toLocaleString("en-IN", { month: "short" }).replace("Sept", "Sep"), billed: 0, collected: 0 };
   });
   for (const inv of invoices) {
     const due = inv.dueAt ? new Date(inv.dueAt) : null;

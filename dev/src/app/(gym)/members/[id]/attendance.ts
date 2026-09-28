@@ -1,7 +1,7 @@
 import { addDays, subDays } from "date-fns";
 
 const TZ = "Asia/Kolkata";
-const key = (d: Date) => new Intl.DateTimeFormat("en-CA", { timeZone: TZ }).format(d);
+const key = (d: Date) => new Intl.DateTimeFormat("en-CA", { timeZone: TZ }).format(d).replace("Sept", "Sep");
 const label = (d: Date) => new Intl.DateTimeFormat("en-IN", { timeZone: TZ, weekday: "short", day: "2-digit", month: "short" }).format(d);
 
 /** 17-week attendance grid + habit stats, computed on the server. */

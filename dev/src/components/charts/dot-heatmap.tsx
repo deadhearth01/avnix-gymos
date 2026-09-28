@@ -57,8 +57,9 @@ export function DotHeatmap({
                     style={{ background: bg }}
                   />
                 </TooltipTrigger>
-                <TooltipContent>
-                  <span className="font-medium">{format(c.value)}</span> · {c.label}
+                <TooltipContent sideOffset={8} className="whitespace-nowrap tabular-nums">
+                  <span className="font-medium">{format(c.value)}</span>
+                  <span className="opacity-70">{c.label}</span>
                 </TooltipContent>
               </Tooltip>
             );

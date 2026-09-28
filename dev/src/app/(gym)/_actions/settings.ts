@@ -13,6 +13,7 @@ import { BUCKETS, DB_ID, T } from "@/lib/appwrite/schema";
 import { SESSION_COOKIE } from "@/lib/auth/cookies";
 import { rateLimit } from "@/lib/data/rate-limit";
 import type { GymSite } from "@/lib/types";
+import { isPreset } from "@/lib/site/presets";
 
 const settingsSchema = z.object({
   name: z.string().trim().min(2).max(128),
@@ -129,6 +130,7 @@ const siteSchema = z.object({
   siteEnabled: z.boolean(),
   site: z.object({
     tagline: z.string().trim().max(140).optional(),
+    heroText: z.string().trim().max(220).optional(),
     about: z.string().trim().max(2000).optional(),
     heroFileId: z.string().max(64).optional(),
     gallery: z.array(z.string().max(64)).max(24).optional(),
@@ -151,10 +153,24 @@ const siteSchema = z.object({
       .max(12)
       .optional(),
     trainers: z
-      .array(z.object({ name: z.string().trim().min(1).max(64), role: z.string().trim().max(64), photoFileId: z.string().max(64).optional() }))
+      .array(
+        z.object({
+          name: z.string().trim().min(1).max(64),
+          role: z.string().trim().max(64),
+          photoFileId: z.string().max(64).optional(),
+          experience: z.string().trim().max(40).optional(),
+          instagram: z
+            .string()
+            .trim()
+            .max(40)
+            .regex(/^@?[\w.]*$/, "Instagram handle can only use letters, numbers, dots and underscores")
+            .optional(),
+        }),
+      )
       .max(12)
       .optional(),
     showPrices: z.boolean().optional(),
+    showTrial: z.boolean().optional(),
   }),
 });
 
@@ -164,10 +180,17 @@ export async function updateSiteAction(payload: z.input<typeof siteSchema>) {
     const d = siteSchema.parse(payload);
     const { tables, storage } = adminClient();
     // every referenced image must have been uploaded by this gym
-    const referencedIds = [d.site.heroFileId, ...(d.site.gallery ?? []), ...(d.site.trainers ?? []).map((t) => t.photoFileId)].filter(Boolean) as string[];
+    const referencedIds = [d.site.heroFileId, ...(d.site.gallery ?? []), ...(d.site.trainers ?? []).map((t) => t.photoFileId)].filter(
+      (id): id is string => !!id && !id.startsWith("preset:"),
+    );
+    const badPreset = [d.site.heroFileId, ...(d.site.gallery ?? []), ...(d.site.trainers ?? []).map((t) => t.photoFileId)].find(
+      (id) => id?.startsWith("preset:") && !isPreset(id),
+    );
+    if (badPreset) throw new UserError("That stock photo is no longer available. Pick another one.");
     const owned = await Promise.all(referencedIds.map((id) => ownsFile(ctx.gymId, id)));
     if (owned.some((o) => !o)) throw new UserError("One of the images doesn't belong to your gym. Re-upload it and try again.");
-    const fileIds = (x: GymSite) => new Set([x.heroFileId, ...(x.gallery ?? []), ...(x.trainers ?? []).map((t) => t.photoFileId)].filter(Boolean) as string[]);
+    const fileIds = (x: GymSite) =>
+      new Set([x.heroFileId, ...(x.gallery ?? []), ...(x.trainers ?? []).map((t) => t.photoFileId)].filter((id): id is string => !!id && !isPreset(id)));
     const before: GymSite = (() => {
       try {
         return ctx.gym.site ? JSON.parse(ctx.gym.site) : {};

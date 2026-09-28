@@ -51,3 +51,15 @@ export async function realtimeTokenAction() {
     gymId: ctx.gymId,
   };
 }
+
+/** Remember which guided tours this user has finished (merged into their Appwrite prefs). */
+export async function markTourSeenAction(key: string) {
+  if (!/^[a-z0-9-]{1,40}$/.test(key)) return;
+  const ctx = await getGymContext();
+  if (ctx.impersonating) return;
+  const { users } = adminClient();
+  const prefs = (await users.getPrefs({ userId: ctx.user.$id })) as Record<string, unknown>;
+  const seen = Array.isArray(prefs.tours) ? (prefs.tours as unknown[]).filter((t): t is string => typeof t === "string") : [];
+  if (seen.includes(key)) return;
+  await users.updatePrefs({ userId: ctx.user.$id, prefs: { ...prefs, tours: [...seen, key].slice(-40) } });
+}

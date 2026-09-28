@@ -59,7 +59,7 @@ export default async function Dashboard() {
         }
       />
 
-      <Stagger className="grid grid-cols-2 gap-3 lg:grid-cols-4 lg:gap-4">
+      <Stagger data-tour="kpis" className="grid grid-cols-2 gap-3 lg:grid-cols-4 lg:gap-4">
         <StaggerItem>
           <StatCard
             icon={UsersRound}
@@ -104,7 +104,7 @@ export default async function Dashboard() {
 
       <div className="mt-4 grid gap-4 xl:grid-cols-[minmax(0,1.65fr)_minmax(0,1fr)]">
         {money ? (
-          <div className="surface p-5">
+          <div data-tour="revenue" className="surface p-5">
             <SectionTitle action={<span className="text-[13px] text-muted-foreground">Last 12 months</span>}>Revenue</SectionTitle>
             <BarTrackChart
               data={d.months.map((m) => ({ label: m.label, value: m.revenue, sub: `${m.newMembers} new members` }))}

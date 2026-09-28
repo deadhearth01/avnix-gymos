@@ -74,13 +74,12 @@ export function TodayFeed({ initial, total, yesterday }: { initial: TodayItem[];
         {count}
         <span className="ml-2 text-xs font-normal text-muted-foreground">yesterday {yesterday}</span>
       </p>
-      <div className="mt-3 flex -space-x-2">
+      {/* small overlap only: initials sit in the middle and must stay readable */}
+      <div className="mt-3 flex -space-x-1">
         {items.slice(0, 7).map((i) => (
-          <PersonAvatar key={i.id} name={i.name} size={30} className="ring-2 ring-card" />
+          <PersonAvatar key={i.id} name={i.name} size={32} className="ring-2 ring-card" />
         ))}
-        {count > 7 && (
-          <span className="grid size-[30px] place-items-center rounded-full bg-muted text-[10px] font-semibold ring-2 ring-card">+{count - 7}</span>
-        )}
+        {count > 7 && <span className="grid size-8 place-items-center rounded-full bg-muted text-[10px] font-semibold ring-2 ring-card">+{count - 7}</span>}
       </div>
       <ul className="-mx-2 mt-3 max-h-[210px] flex-1 scrollbar-thin overflow-y-auto">
         <AnimatePresence initial={false}>

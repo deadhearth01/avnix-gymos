@@ -46,6 +46,7 @@ const zWaFrom = z
   .refine((v) => v !== "__invalid__", "Enter the WhatsApp number in international format, e.g. +91 98765 43210");
 
 const createSchema = z.object({
+  onboarding: z.boolean().default(false),
   name: z.string().trim().min(2, "Gym name is required").max(128),
   slug: z
     .string()

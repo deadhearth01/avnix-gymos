@@ -1,4 +1,5 @@
-import { differenceInCalendarDays, format, formatDistanceToNowStrict, isValid, parseISO } from "date-fns";
+import { formatDistanceToNowStrict, isValid, parseISO } from "date-fns";
+import { istDaysBetween } from "@/lib/domain/ist";
 
 const inrFmt = new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 });
 const inrFmt2 = new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -15,9 +16,30 @@ export function toDate(v: string | Date | null | undefined): Date | null {
   const d = typeof v === "string" ? parseISO(v) : v;
   return isValid(d) ? d : null;
 }
-export const fmtDate = (v: string | Date | null | undefined, pattern = "dd MMM yyyy") => {
+const TZ = "Asia/Kolkata";
+const FMT: Record<string, Intl.DateTimeFormatOptions> = {
+  "dd MMM yyyy": { day: "2-digit", month: "short", year: "numeric" },
+  "dd MMM yy": { day: "2-digit", month: "short", year: "2-digit" },
+  "dd MMM": { day: "2-digit", month: "short" },
+  "h:mm a": { hour: "numeric", minute: "2-digit", hour12: true },
+  "dd MMM yyyy, h:mm a": { day: "2-digit", month: "short", year: "numeric", hour: "numeric", minute: "2-digit", hour12: true },
+};
+const cache = new Map<string, Intl.DateTimeFormat>();
+
+/** Always formats in IST so server (UTC) and browser render identical text — no hydration drift. */
+export const fmtDate = (v: string | Date | null | undefined, pattern: keyof typeof FMT | string = "dd MMM yyyy") => {
   const d = toDate(v);
-  return d ? format(d, pattern) : "—";
+  if (!d) return "—";
+  let f = cache.get(pattern);
+  if (!f) {
+    f = new Intl.DateTimeFormat("en-IN", { timeZone: TZ, ...(FMT[pattern] ?? FMT["dd MMM yyyy"]) });
+    cache.set(pattern, f);
+  }
+  return f
+    .format(d)
+    .replace("Sept", "Sep")
+    .replace(/\bam\b/, "AM")
+    .replace(/\bpm\b/, "PM");
 };
 export const fmtDateTime = (v: string | Date | null | undefined) => fmtDate(v, "dd MMM yyyy, h:mm a");
 export const fmtTime = (v: string | Date | null | undefined) => fmtDate(v, "h:mm a");
@@ -27,7 +49,7 @@ export const ago = (v: string | Date | null | undefined) => {
 };
 export const daysUntil = (v: string | Date | null | undefined) => {
   const d = toDate(v);
-  return d ? differenceInCalendarDays(d, new Date()) : null;
+  return d ? istDaysBetween(new Date(), d) : null;
 };
 
 export function initials(name: string | null | undefined) {

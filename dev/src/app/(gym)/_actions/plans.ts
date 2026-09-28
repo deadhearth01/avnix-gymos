@@ -61,3 +61,16 @@ export async function setPlanActiveAction(id: string, active: boolean) {
     active ? "Plan restored" : "Plan archived",
   );
 }
+
+/** Quick price edit from the website editor. */
+export async function setPlanPriceAction(id: string, price: number) {
+  return safe(async () => {
+    const ctx = await requireCap("plans.manage");
+    const value = zMoney.parse(price);
+    const plan = await repo(ctx.gymId).update<Plan>(T.plans, id, { price: value });
+    await audit({ gymId: ctx.gymId, actor: ctx.user, action: "plan.update", entity: "plan", entityId: id, summary: `${plan.name} ₹${value}` });
+    revalidatePath("/plans");
+    revalidatePath("/website");
+    revalidatePath(`/s/${ctx.gym.slug}`);
+  }, "Price updated");
+}

@@ -65,7 +65,7 @@ export function emailLayout({
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td align="center" style="padding:32px 16px">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:520px">
 <tr><td style="padding:0 4px 16px"><table role="presentation" cellpadding="0" cellspacing="0"><tr>
-<td style="width:30px;height:30px;border-radius:8px;background:#16a34a;color:#fff;font-weight:700;font-size:14px;text-align:center">G</td>
+<td style="width:30px;height:30px"><img src="https://gym.avnix.in/icon-192.png" width="30" height="30" alt="GymOS" style="display:block;border-radius:8px"></td>
 <td style="padding-left:10px;font-weight:600;font-size:15px">GymOS <span style="color:#71717a;font-weight:500;font-size:12px">by AvniX</span></td></tr></table></td></tr>
 <tr><td style="background:#ffffff;border:1px solid #ececee;border-radius:20px;padding:32px">
 <h1 style="margin:0 0 12px;font-size:22px;line-height:1.25;letter-spacing:-0.02em">${esc(heading)}</h1>
@@ -83,6 +83,7 @@ export function credentialsEmail({
   password,
   loginUrl,
   siteUrl,
+  onboarding = false,
 }: {
   gymName: string;
   ownerName: string;
@@ -90,18 +91,19 @@ export function credentialsEmail({
   password: string;
   loginUrl: string;
   siteUrl: string;
+  onboarding?: boolean;
 }) {
   const row = (k: string, v: string, mono = false) =>
     `<tr><td style="padding:10px 14px;color:#71717a;font-size:13px;border-bottom:1px solid #f0f0f2;width:120px">${esc(k)}</td><td style="padding:10px 14px;font-size:14px;border-bottom:1px solid #f0f0f2;${mono ? "font-family:JetBrains Mono,Menlo,monospace;font-weight:600;" : ""}">${esc(v)}</td></tr>`;
   const html = emailLayout({
     preheader: `Your ${gymName} dashboard is ready`,
     heading: `Welcome to GymOS, ${ownerName.split(" ")[0] || "there"} 👋`,
-    bodyHtml: `<p style="margin:0 0 16px;font-size:15px;line-height:1.6;color:#3f3f46">Your dashboard for <b>${esc(gymName)}</b> is ready. Use the details below to sign in. For your security, change the password after your first sign-in.</p>
+    bodyHtml: `<p style="margin:0 0 16px;font-size:15px;line-height:1.6;color:#3f3f46">Your dashboard for <b>${esc(gymName)}</b> is ready. ${onboarding ? "Sign in with the details below and we’ll walk you through a five-minute setup: your gym details, prices, timings and website." : "Use the details below to sign in."} For your security, change the password after your first sign-in.</p>
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #ececee;border-radius:12px;border-collapse:separate;overflow:hidden">
 ${row("Sign-in page", loginUrl)}${row("Email", email)}${row("Password", password, true)}${row("Your website", siteUrl)}
 </table>`,
-    cta: { label: "Open your dashboard", href: loginUrl },
+    cta: { label: onboarding ? "Set up your gym" : "Open your dashboard", href: loginUrl },
   });
-  const text = `Welcome to GymOS!\n\nYour dashboard for ${gymName} is ready.\n\nSign in: ${loginUrl}\nEmail: ${email}\nPassword: ${password}\nYour website: ${siteUrl}\n\nChange your password after your first sign-in.`;
+  const text = `Welcome to GymOS!\n\nYour dashboard for ${gymName} is ready.${onboarding ? " Sign in to finish a five-minute setup." : ""}\n\nSign in: ${loginUrl}\nEmail: ${email}\nPassword: ${password}\nYour website: ${siteUrl}\n\nChange your password after your first sign-in.`;
   return { subject: `Your ${gymName} dashboard is ready`, html, text };
 }

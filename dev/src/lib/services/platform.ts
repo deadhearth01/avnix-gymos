@@ -64,6 +64,8 @@ export type CreateGymInput = {
   };
   twilio: { smsServiceSid?: string; whatsappFrom?: string; whatsappServiceSid?: string };
   emailOwner: boolean;
+  /** Owner finishes setup themselves (guided wizard on first sign-in); the website stays offline until then. */
+  onboarding?: boolean;
 };
 
 export type CreateGymResult = {
@@ -161,7 +163,11 @@ export async function createGym(input: CreateGymInput, actor: { $id: string; nam
       ownerId = u.$id;
       cleanup.push(() => users.delete({ userId: ownerId }));
       await users.updateEmailVerification({ userId: ownerId, emailVerification: true });
-      await users.updatePrefs({ userId: ownerId, prefs: { mustChangePassword: true } });
+      await users.updatePrefs({ userId: ownerId, prefs: { mustChangePassword: true, ...(input.onboarding ? { onboardingGymId: gymId } : {}) } });
+    }
+    if (existingAccount && input.onboarding) {
+      const prefs = await users.getPrefs({ userId: ownerId });
+      await users.updatePrefs({ userId: ownerId, prefs: { ...prefs, onboardingGymId: gymId } });
     }
 
     // 2 · Team = tenant boundary (Realtime + row permissions use it)
@@ -191,15 +197,19 @@ export async function createGym(input: CreateGymInput, actor: { $id: string; nam
         twilioWhatsappFrom: input.twilio.whatsappFrom?.trim() || null,
         twilioWhatsappServiceSid: input.twilio.whatsappServiceSid?.trim() || null,
         messagingEnabled: Boolean(input.twilio.smsServiceSid || input.twilio.whatsappFrom || input.twilio.whatsappServiceSid),
+        siteEnabled: !input.onboarding,
         site: JSON.stringify({
-          tagline: `Train smarter at ${input.name.trim()}`,
-          about: `${input.name.trim()} is a modern fitness centre${input.city ? ` in ${input.city}` : ""} with expert trainers, quality equipment and flexible memberships.`,
-          amenities: ["Certified trainers", "Cardio zone", "Free weights", "Locker rooms", "Personal training", "Diet guidance"],
+          tagline: "Train hard. Train right.",
+          heroText: `Coaching, serious equipment and people who notice when you don’t show up${input.city ? ` — right here in ${input.city.trim()}` : ""}.`,
+          heroFileId: "preset:hero-deadlift",
+          about: `${input.name.trim()} is a neighbourhood gym built for steady progress — good coaching, clean equipment and a floor where everyone belongs.`,
+          amenities: ["Certified trainers", "Cardio deck", "Free weights & racks", "Locker rooms", "Personal training", "Diet guidance"],
           hours: [
             { days: "Mon – Sat", open: "05:00", close: "22:00" },
             { days: "Sunday", open: "06:00", close: "12:00" },
           ],
           showPrices: true,
+          showTrial: true,
         }),
         settings: JSON.stringify({}),
       },
@@ -256,7 +266,7 @@ export async function createGym(input: CreateGymInput, actor: { $id: string; nam
   let emailError: string | undefined;
   if (input.emailOwner && password) {
     try {
-      await sendCredentials({ gymName: input.name, ownerName: input.owner.name, email, password, slug: input.slug });
+      await sendCredentials({ gymName: input.name, ownerName: input.owner.name, email, password, slug: input.slug, onboarding: input.onboarding });
       emailed = true;
     } catch (e) {
       emailError = (e as Error).message;
@@ -282,15 +292,17 @@ export async function sendCredentials({
   email,
   password,
   slug,
+  onboarding,
 }: {
   gymName: string;
   ownerName: string;
   email: string;
   password: string;
   slug: string;
+  onboarding?: boolean;
 }) {
   if (!isEmailReady()) throw new Error("Email isn't configured on the server.");
-  const msg = credentialsEmail({ gymName, ownerName, email, password, loginUrl: loginUrl(), siteUrl: `https://${gymSubdomain(slug)}` });
+  const msg = credentialsEmail({ gymName, ownerName, email, password, loginUrl: loginUrl(), siteUrl: `https://${gymSubdomain(slug)}`, onboarding });
   await sendEmail({ to: email, toName: ownerName, ...msg, tag: "gym-credentials" });
 }
 
@@ -300,7 +312,8 @@ export async function resetOwnerPassword(gymId: string) {
   if (!gym.ownerUserId) throw new Error("This gym has no owner account.");
   const password = generatePassword();
   await users.updatePassword({ userId: gym.ownerUserId, password });
-  await users.updatePrefs({ userId: gym.ownerUserId, prefs: { mustChangePassword: true } });
+  const prefs = await users.getPrefs({ userId: gym.ownerUserId }).catch(() => ({}));
+  await users.updatePrefs({ userId: gym.ownerUserId, prefs: { ...prefs, mustChangePassword: true } });
   await users.deleteSessions({ userId: gym.ownerUserId }); // sign out everywhere
   return { email: gym.ownerEmail ?? "", password, gym };
 }

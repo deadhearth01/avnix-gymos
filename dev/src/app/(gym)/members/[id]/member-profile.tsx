@@ -135,7 +135,7 @@ export function MemberProfile(p: Props) {
   const confirm = useConfirm();
   const [tab, setTab] = React.useState<"activity" | "billing" | "messages" | "history">("activity");
   const [dialog, setDialog] = React.useState<null | "sell" | "collect" | "freeze" | "edit" | "card">(
-    p.initialAction === "renew" ? "sell" : p.initialAction === "collect" ? "collect" : null,
+    p.initialAction === "renew" ? "sell" : p.initialAction === "collect" ? "collect" : p.initialAction === "card" ? "card" : null,
   );
   const [pending, start] = React.useTransition();
 
@@ -543,7 +543,21 @@ export function MemberProfile(p: Props) {
         open={dialog === "card"}
         onClose={() => setDialog(null)}
         gymName={p.gym.name}
-        member={{ name: m.name, code: m.code, phone: m.phone, planName: m.planName, expiresAt: m.expiresAt }}
+        member={{
+          name: m.name,
+          code: m.code,
+          phone: m.phone,
+          status: m.status,
+          planName: m.planName,
+          goal: m.goal,
+          trainerName: m.trainerName,
+          startAt: m.startAt,
+          expiresAt: m.expiresAt,
+          progress: p.current?.progress ?? null,
+          daysLeft: p.daysLeft,
+          visits30: p.attendance.last30,
+          streak: p.attendance.streak,
+        }}
       />
       <EditSheet key={`edit-${dialog === "edit"}`} open={dialog === "edit"} onClose={() => setDialog(null)} onDone={done} member={m} />
     </>

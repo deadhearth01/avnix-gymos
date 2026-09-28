@@ -36,7 +36,10 @@ export type Channel = E<typeof CHANNELS>;
 export type MsgStatus = E<typeof MSG_STATUS>;
 
 export type GymSite = {
+  /** Hero headline. */
   tagline?: string;
+  /** Hero supporting line, shown under the headline. */
+  heroText?: string;
   about?: string;
   heroFileId?: string;
   gallery?: string[];
@@ -45,8 +48,10 @@ export type GymSite = {
   socials?: { instagram?: string; facebook?: string; youtube?: string; google?: string };
   mapUrl?: string;
   faqs?: { q: string; a: string }[];
-  trainers?: { name: string; role: string; photoFileId?: string }[];
+  trainers?: { name: string; role: string; photoFileId?: string; experience?: string; instagram?: string }[];
   showPrices?: boolean;
+  /** Free-trial booking (buttons + form). Defaults to on. */
+  showTrial?: boolean;
 };
 
 export type Gym = Row & {

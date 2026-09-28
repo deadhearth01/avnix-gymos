@@ -39,7 +39,11 @@ export function PageHeader({
         <h1 className="text-[26px] leading-tight font-semibold tracking-[-0.02em] text-balance">{title}</h1>
         {description && <p className="mt-1.5 max-w-2xl text-[15px] text-pretty text-muted-foreground">{description}</p>}
       </div>
-      {actions && <div className="flex shrink-0 flex-wrap items-center gap-2">{actions}</div>}
+      {actions && (
+        <div data-tour="page-actions" className="flex shrink-0 flex-wrap items-center gap-2">
+          {actions}
+        </div>
+      )}
     </FadeIn>
   );
 }

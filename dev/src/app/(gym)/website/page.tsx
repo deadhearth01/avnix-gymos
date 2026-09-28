@@ -1,11 +1,16 @@
+import { Query } from "node-appwrite";
+import { T } from "@/lib/appwrite/schema";
 import { requireCap } from "@/lib/auth/session";
-import type { GymSite } from "@/lib/types";
+import { can } from "@/lib/auth/rbac";
+import { repo } from "@/lib/data/repo";
+import type { GymSite, Plan } from "@/lib/types";
 import { WebsiteEditor } from "./website-editor";
 
 export const metadata = { title: "Website editor" };
 
 export default async function WebsitePage() {
-  const { gym } = await requireCap("website.manage");
+  const { gym, role, gymId } = await requireCap("website.manage");
+  const plans = (await repo(gymId).list<Plan>(T.plans, [Query.equal("active", true), Query.orderAsc("sortOrder"), Query.limit(100)], false)).rows;
   let site: GymSite = {};
   try {
     site = gym.site ? (JSON.parse(gym.site) as GymSite) : {};
@@ -26,6 +31,8 @@ export default async function WebsitePage() {
       customDomainEnabled={gym.customDomainEnabled}
       publicUrl={customVerified ? `https://${gym.customDomain}` : subdomain}
       previewUrl={`/s/${gym.slug}`}
+      plans={plans.map((p) => ({ id: p.$id, name: p.name, type: p.type, price: p.price, sessions: p.sessions, durationDays: p.durationDays }))}
+      canEditPrices={can(role, "plans.manage")}
     />
   );
 }
