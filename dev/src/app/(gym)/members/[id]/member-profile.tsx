@@ -10,7 +10,7 @@ import {
   CreditCard,
   Dumbbell,
   Flame,
-  MessageCircle,
+  WhatsApp,
   MoreHorizontal,
   Pencil,
   Phone,
@@ -24,7 +24,9 @@ import {
   Undo2,
   Wallet,
   QrCode,
-} from "lucide-react";
+  Fingerprint,
+  ScanFace,
+} from "@/components/icons";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -41,6 +43,7 @@ import { DotHeatmap } from "@/components/charts/dot-heatmap";
 import { Field, AffixInput } from "@/components/forms/field";
 import { Segmented } from "@/components/kit/segmented";
 import { useConfirm } from "@/components/kit/confirm";
+import { FaceEnrollDialog } from "@/components/face/face-enroll";
 import { MemberCard } from "@/components/gym/member-card";
 import { PlanSaleFields, initialSale, saleTotals, type PlanOption, type SaleState } from "@/components/gym/plan-sale";
 import { STATUS_META, type LiveStatus } from "@/lib/domain/membership";
@@ -87,6 +90,7 @@ type Props = {
   member: Member;
   current: { planName: string; startAt: string; endAt: string; frozenDays: number; freezeUntil: string | null; status: string; progress: number } | null;
   daysLeft: number | null;
+  faceEnrolled: boolean;
   ptPacks: { id: string; planName: string; used: number; total: number; endAt: string }[];
   memberships: {
     id: string;
@@ -134,7 +138,7 @@ export function MemberProfile(p: Props) {
   const router = useRouter();
   const confirm = useConfirm();
   const [tab, setTab] = React.useState<"activity" | "billing" | "messages" | "history">("activity");
-  const [dialog, setDialog] = React.useState<null | "sell" | "collect" | "freeze" | "edit" | "card">(
+  const [dialog, setDialog] = React.useState<null | "sell" | "collect" | "freeze" | "edit" | "card" | "face">(
     p.initialAction === "renew" ? "sell" : p.initialAction === "collect" ? "collect" : p.initialAction === "card" ? "card" : null,
   );
   const [pending, start] = React.useTransition();
@@ -181,7 +185,7 @@ export function MemberProfile(p: Props) {
           <>
             <Button variant="outline" asChild>
               <a href={waLink(m.phone, `Hi ${first}, `) ?? "#"} target="_blank" rel="noreferrer">
-                <AnimatedIcon icon={MessageCircle} /> WhatsApp
+                <AnimatedIcon icon={WhatsApp} /> WhatsApp
               </a>
             </Button>
             <Button
@@ -215,6 +219,11 @@ export function MemberProfile(p: Props) {
                 <DropdownMenuItem onSelect={() => setDialog("card")}>
                   <QrCode className="size-4" /> Member card & QR
                 </DropdownMenuItem>
+                {p.perms.edit && (
+                  <DropdownMenuItem onSelect={() => setDialog("face")}>
+                    <ScanFace className="size-4" /> {p.faceEnrolled ? "Face ID · update" : "Set up Face ID"}
+                  </DropdownMenuItem>
+                )}
                 {p.perms.edit && (
                   <DropdownMenuItem onSelect={() => setDialog("edit")}>
                     <Pencil className="size-4" /> Edit details
@@ -358,6 +367,11 @@ export function MemberProfile(p: Props) {
               <Detail label="Birthday" value={m.dob ? fmtDate(m.dob, "dd MMM") : null} />
               <Detail label="Goal" value={m.goal} icon={Target} />
               <Detail label="Trainer" value={m.trainerName} icon={Dumbbell} />
+              <Detail
+                label="Device user ID"
+                value={m.code ? `${Number(m.code.replace(/\D/g, "")) || "—"}${p.faceEnrolled ? " · Face ID on" : ""}` : null}
+                icon={Fingerprint}
+              />
               <Detail label="Language" value={{ en: "English", te: "తెలుగు", hi: "हिंदी" }[m.lang]} />
               <Detail label="Source" value={SOURCE_LABEL[m.source] ?? m.source} />
               <Detail label="Emergency" value={m.emergencyName ? `${m.emergencyName} · ${fmtPhone(m.emergencyPhone)}` : null} className="col-span-2" />
@@ -559,6 +573,7 @@ export function MemberProfile(p: Props) {
           streak: p.attendance.streak,
         }}
       />
+      <FaceEnrollDialog open={dialog === "face"} onClose={() => setDialog(null)} memberId={m.id} memberName={m.name} enrolled={p.faceEnrolled} onDone={done} />
       <EditSheet key={`edit-${dialog === "edit"}`} open={dialog === "edit"} onClose={() => setDialog(null)} onDone={done} member={m} />
     </>
   );

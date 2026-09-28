@@ -1,5 +1,5 @@
 import * as React from "react";
-import type { LucideIcon } from "lucide-react";
+import type { IconComponent } from "@/components/icons";
 import { AnimatedIcon } from "@/components/kit/animated-icon";
 import { cn } from "@/lib/utils";
 
@@ -11,7 +11,7 @@ export function EmptyState({
   className,
   compact,
 }: {
-  icon: LucideIcon;
+  icon: IconComponent;
   title: string;
   description?: React.ReactNode;
   action?: React.ReactNode;

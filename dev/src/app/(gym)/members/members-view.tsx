@@ -3,7 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Download, MessageCircle, MoreHorizontal, ScanLine, UserPlus, UsersRound, Eye } from "lucide-react";
+import { Download, MessageCircle, WhatsApp, MoreHorizontal, ScanLine, UserPlus, UsersRound, Eye } from "@/components/icons";
 import { DataTable, type Column } from "@/components/kit/data-table";
 import { StatusDot, Tag } from "@/components/kit/badges";
 import { PersonAvatar } from "@/components/kit/person-avatar";
@@ -192,7 +192,7 @@ export function MembersView({
             </DropdownMenuItem>
             <DropdownMenuItem asChild>
               <a href={waLink(r.phone, `Hi ${r.name.split(" ")[0]}, `) ?? "#"} target="_blank" rel="noreferrer">
-                <MessageCircle className="size-4" /> WhatsApp
+                <WhatsApp className="size-4" /> WhatsApp
               </a>
             </DropdownMenuItem>
             {canBill && (

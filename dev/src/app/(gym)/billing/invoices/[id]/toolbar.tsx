@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowLeft, Copy, Printer, Send } from "lucide-react";
+import { ArrowLeft, Copy, Printer, Send } from "@/components/icons";
 import { Button } from "@/components/ui/button";
 import { notify } from "@/lib/notify";
 import { waLink } from "@/lib/whatsapp";

@@ -2,7 +2,7 @@ import Link from "next/link";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { Query } from "node-appwrite";
-import { KeyRound } from "lucide-react";
+import { KeyRound } from "@/components/icons";
 import { AppShell } from "@/components/shell/app-shell";
 import { RealtimeProvider } from "@/components/realtime/realtime-provider";
 import { getGymContext } from "@/lib/auth/session";
@@ -72,7 +72,7 @@ export default async function GymLayout({ children }: { children: React.ReactNod
       <OnboardingTour seen={toursSeen} enabled={!ctx.impersonating} markSeen={markTourSeenAction} />
       <RealtimeProvider getToken={realtimeTokenAction}>
         {mustChange && (
-          <div className="mb-5 flex flex-col gap-3 rounded-2xl border border-primary/25 bg-success-soft/50 p-4 sm:flex-row sm:items-center print:hidden">
+          <div className="mb-5 flex flex-col gap-3 rounded-2xl border border-primary/25 bg-primary/8 p-4 sm:flex-row sm:items-center print:hidden">
             <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-primary text-primary-foreground">
               <KeyRound className="size-4" />
             </span>

@@ -3,7 +3,7 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "motion/react";
-import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, ChevronDown, Search, X, type LucideIcon } from "lucide-react";
+import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, ChevronDown, Search, X, type IconComponent } from "@/components/icons";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   DropdownMenu,
@@ -52,7 +52,7 @@ type Props<T> = {
   rowHref?: (row: T) => string;
   onRowClick?: (row: T) => void;
   toolbar?: React.ReactNode;
-  empty?: { icon: LucideIcon; title: string; description?: string; action?: React.ReactNode };
+  empty?: { icon: IconComponent; title: string; description?: string; action?: React.ReactNode };
   className?: string;
   dense?: boolean;
   /** Card renderer used below the `sm` breakpoint instead of the table. */

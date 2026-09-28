@@ -1,7 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { Caveat } from "next/font/google";
-import { ArrowUpRight } from "lucide-react";
+import { ArrowUpRight } from "@/components/icons";
 import { Logo } from "@/components/brand/logo";
 
 const caveat = Caveat({ variable: "--font-caveat", subsets: ["latin"], display: "swap", weight: ["500", "700"] });

@@ -3,7 +3,7 @@
 import * as React from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "motion/react";
-import { Menu, Search, Eye, X, UserPlus, ScanLine, ReceiptText, Target, Building2, Sun, Moon } from "lucide-react";
+import { Menu, Search, Eye, X, UserPlus, ScanLine, ReceiptText, Target, Building2, Sun, Moon } from "@/components/icons";
 import { useTheme } from "next-themes";
 import { ADMIN_NAV, GYM_FOOTER_NAV, GYM_NAV } from "@/components/shell/nav-config";
 import { can } from "@/lib/auth/rbac";

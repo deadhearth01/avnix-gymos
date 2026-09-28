@@ -1,5 +1,5 @@
 import * as React from "react";
-import type { LucideIcon } from "lucide-react";
+import type { IconComponent } from "@/components/icons";
 import { AnimatedIcon } from "@/components/kit/animated-icon";
 import { AnimatedNumber, HoverLift } from "@/components/kit/motion";
 import { Delta } from "@/components/kit/badges";
@@ -17,7 +17,7 @@ export function StatCard({
   className,
   children,
 }: {
-  icon: LucideIcon;
+  icon: IconComponent;
   label: string;
   value: number;
   fmt?: FmtKey;

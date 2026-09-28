@@ -19,9 +19,9 @@ const round = (v: number, precision = 3): number => parseFloat(v.toFixed(precisi
 const adjust = (v: number, fMin: number, fMax: number, tMin: number, tMax: number): number => round(tMin + ((tMax - tMin) * (v - fMin)) / (fMax - fMin));
 
 type ProfileCardProps = {
-  avatarUrl: string | null;
+  avatarUrl?: string | null;
   name: string;
-  title: string;
+  title?: string;
   handle?: string;
   status?: string;
   contactText?: string;
@@ -29,6 +29,11 @@ type ProfileCardProps = {
   enableTilt?: boolean;
   onContactClick?: () => void;
   className?: string;
+  /** Replaces the portrait layout (used by the member card); rendered above the holo layers, unblended. */
+  children?: React.ReactNode;
+  aspect?: number;
+  /** Stronger colour shift, for the membership card. */
+  vivid?: boolean;
 };
 
 type TiltEngine = {
@@ -51,6 +56,9 @@ function ProfileCardComponent({
   enableTilt = true,
   onContactClick,
   className = "",
+  children,
+  aspect = 0.74,
+  vivid = false,
 }: ProfileCardProps) {
   const wrapRef = useRef<HTMLDivElement>(null);
   const shellRef = useRef<HTMLDivElement>(null);
@@ -290,7 +298,7 @@ function ProfileCardComponent({
           aria-label={`${name}, ${title}`}
           className="relative grid w-full overflow-hidden"
           style={{
-            aspectRatio: "0.74",
+            aspectRatio: String(aspect),
             borderRadius: cardRadius,
             boxShadow: "rgba(0, 0, 0, 0.55) calc((var(--pointer-from-left) * 10px) - 3px) calc((var(--pointer-from-top) * 20px) - 6px) 24px -8px",
             transition: "transform 1s ease",
@@ -309,66 +317,80 @@ function ProfileCardComponent({
           }}
         >
           <div className="absolute inset-0 grid" style={{ backgroundImage: "var(--inner-gradient)", borderRadius: cardRadius, gridArea: "1 / -1" }}>
-            <div style={shineStyle} />
+            <div style={vivid ? { ...shineStyle, opacity: "calc(0.3 + 0.45 * var(--card-opacity))" } : shineStyle} />
             <div style={glareStyle} />
 
-            <div
-              className="overflow-visible"
-              style={{ transform: "translateZ(2px)", gridArea: "1 / -1", borderRadius: cardRadius, backfaceVisibility: "hidden" }}
-            >
-              {avatarUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element -- transform-driven layer; next/image adds a wrapper that breaks the 3D stack
-                <img
-                  className="absolute bottom-[-1px] left-1/2 w-[80%] will-change-transform"
-                  src={avatarUrl}
-                  alt=""
-                  loading="lazy"
-                  decoding="async"
-                  style={{
-                    transformOrigin: "50% 100%",
-                    transform:
-                      "translateX(calc(-50% + (var(--pointer-from-left) - 0.5) * 6px)) translateZ(0) scaleY(calc(1 + (var(--pointer-from-top) - 0.5) * 0.02)) scaleX(calc(1 + (var(--pointer-from-left) - 0.5) * 0.01))",
-                    transition: "transform 120ms ease-out",
-                  }}
-                />
-              ) : (
-                <span aria-hidden className="gs-display absolute inset-0 grid place-items-center text-[7rem] text-white/15">
-                  {initials}
-                </span>
-              )}
+            {children ? (
               <div
-                className="absolute z-[2] flex items-center justify-between gap-3 border border-white/10 backdrop-blur-[30px]"
-                style={{ bottom: 16, left: 16, right: 16, background: "rgba(255, 255, 255, 0.1)", borderRadius: 18, padding: "10px 10px 10px 14px" }}
+                className="relative z-[6]"
+                style={{
+                  gridArea: "1 / -1",
+                  transform: "translate3d(calc(var(--pointer-from-left) * -4px + 2px), calc(var(--pointer-from-top) * -4px + 2px), 3px)",
+                }}
               >
-                <div className="min-w-0">
-                  <p className="truncate text-sm leading-tight font-semibold text-white">{handle ? `@${handle}` : name}</p>
-                  {status && <p className="mt-1 truncate text-xs leading-tight text-white/70">{status}</p>}
-                </div>
-                {onContactClick && (
-                  <button
-                    type="button"
-                    onClick={onContactClick}
-                    aria-label={`${contactText} with ${name}`}
-                    className="min-h-10 shrink-0 cursor-pointer rounded-xl border border-white/15 px-3.5 text-xs font-semibold text-white backdrop-blur-[10px] transition-[border-color,transform] duration-200 hover:-translate-y-px hover:border-white/50 focus-visible:outline-2 focus-visible:outline-white"
+                {children}
+              </div>
+            ) : (
+              <>
+                <div
+                  className="overflow-visible"
+                  style={{ transform: "translateZ(2px)", gridArea: "1 / -1", borderRadius: cardRadius, backfaceVisibility: "hidden" }}
+                >
+                  {avatarUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element -- transform-driven layer; next/image adds a wrapper that breaks the 3D stack
+                    <img
+                      className="absolute bottom-[-1px] left-1/2 w-[80%] will-change-transform"
+                      src={avatarUrl}
+                      alt=""
+                      loading="lazy"
+                      decoding="async"
+                      style={{
+                        transformOrigin: "50% 100%",
+                        transform:
+                          "translateX(calc(-50% + (var(--pointer-from-left) - 0.5) * 6px)) translateZ(0) scaleY(calc(1 + (var(--pointer-from-top) - 0.5) * 0.02)) scaleX(calc(1 + (var(--pointer-from-left) - 0.5) * 0.01))",
+                        transition: "transform 120ms ease-out",
+                      }}
+                    />
+                  ) : (
+                    <span aria-hidden className="gs-display absolute inset-0 grid place-items-center text-[7rem] text-white/15">
+                      {initials}
+                    </span>
+                  )}
+                  <div
+                    className="absolute z-[2] flex items-center justify-between gap-3 border border-white/10 backdrop-blur-[30px]"
+                    style={{ bottom: 16, left: 16, right: 16, background: "rgba(255, 255, 255, 0.1)", borderRadius: 18, padding: "10px 10px 10px 14px" }}
                   >
-                    {contactText}
-                  </button>
-                )}
-              </div>
-            </div>
+                    <div className="min-w-0">
+                      <p className="truncate text-sm leading-tight font-semibold text-white">{handle ? `@${handle}` : name}</p>
+                      {status && <p className="mt-1 truncate text-xs leading-tight text-white/70">{status}</p>}
+                    </div>
+                    {onContactClick && (
+                      <button
+                        type="button"
+                        onClick={onContactClick}
+                        aria-label={`${contactText} with ${name}`}
+                        className="min-h-10 shrink-0 cursor-pointer rounded-xl border border-white/15 px-3.5 text-xs font-semibold text-white backdrop-blur-[10px] transition-[border-color,transform] duration-200 hover:-translate-y-px hover:border-white/50 focus-visible:outline-2 focus-visible:outline-white"
+                      >
+                        {contactText}
+                      </button>
+                    )}
+                  </div>
+                </div>
 
-            <div
-              className="pointer-events-none relative z-[5] max-h-full overflow-hidden text-center"
-              style={{
-                transform: "translate3d(calc(var(--pointer-from-left) * -6px + 3px), calc(var(--pointer-from-top) * -6px + 3px), 0.1px)",
-                gridArea: "1 / -1",
-              }}
-            >
-              <div className="absolute inset-x-0 top-7 flex flex-col items-center px-4">
-                <h3 className="gs-display text-[clamp(2.2rem,4.2vw,3.1rem)] text-white">{name}</h3>
-                <p className="mt-1.5 text-sm font-medium text-white/75">{title}</p>
-              </div>
-            </div>
+                <div
+                  className="pointer-events-none relative z-[5] max-h-full overflow-hidden text-center"
+                  style={{
+                    transform: "translate3d(calc(var(--pointer-from-left) * -6px + 3px), calc(var(--pointer-from-top) * -6px + 3px), 0.1px)",
+                    gridArea: "1 / -1",
+                  }}
+                >
+                  <div className="absolute inset-x-0 top-7 flex flex-col items-center px-4">
+                    <h3 className="gs-display text-[clamp(2.2rem,4.2vw,3.1rem)] text-white">{name}</h3>
+                    <p className="mt-1.5 text-sm font-medium text-white/75">{title}</p>
+                  </div>
+                </div>
+              </>
+            )}
           </div>
         </section>
       </div>

@@ -3,7 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { CircleCheck, CreditCard, Download, KeyRound, RefreshCw } from "lucide-react";
+import { CircleCheck, CreditCard, Download, KeyRound, RefreshCw } from "@/components/icons";
 import { DataTable, type Column } from "@/components/kit/data-table";
 import { Tag, type Tone } from "@/components/kit/badges";
 import { BrandMark } from "@/components/shell/sidebar";

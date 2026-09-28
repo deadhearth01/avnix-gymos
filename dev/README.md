@@ -93,6 +93,25 @@ Twilio ─► POST /api/webhooks/twilio  (signature-verified delivery status)
 
 ---
 
+## Biometric attendance (fingerprint & face)
+
+Research and design: `../research/05-biometric-attendance.md`. Every source ends in `recordPunch()` (`src/lib/services/attendance.ts`), which applies the front-desk access policy, de-duplicates replays and logs to the `punches` table (live on **Devices**).
+
+| Device | How it connects | Endpoint |
+|---|---|---|
+| eSSL / ZKTeco / Realtime / BioMax / Identix (fingerprint, face, card) | Device menu → Comm → Cloud server (ADMS): `gym.avnix.in`, port 443 | `/iclock/cdata`, `/iclock/getrequest`, `/iclock/registry`, `/iclock/push` — identified by registered serial number |
+| Hikvision face terminals | Web UI → HTTP listening → URL shown once in GymOS | `POST /api/devices/hik/<device-key>` |
+| Anything else / scripts / future USB bridge | `Authorization: Bearer <device-key>` | `POST /api/devices/punch` `{ "userId": "140", "method": "fingerprint" }` |
+| Any camera (laptop, tablet, USB webcam) | Face ID kiosk in the browser | `/kiosk` (staff session) — enrol from Member → Face ID |
+
+- **Device user ID = number in the member code** (`M0140` → `140`).
+- Face ID uses `@vladmandic/human` in the browser; models are copied to `public/models/human` by `npm run dev/build` (`scripts/sync-face-models.mjs`, gitignored). Only 1024-d embeddings are sent; they live in the private `face_profiles` table with consent time and staff name.
+- Old ZKTeco firmware without HTTPS needs plain HTTP on port 80 for `/iclock/*` only.
+
+## Platform pricing
+
+Super admin → **Pricing** holds the fixed setup + monthly fee plans (row `pricing` in the private `platform_settings` table). New gyms pick a plan; the server applies its fees unless "custom pricing" is allowed and switched on for that gym.
+
 ## Going live (DNS, SSL, Twilio)
 
 1. **DNS at Hostinger for avnix.in.** Add these records:

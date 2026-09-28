@@ -8,6 +8,7 @@ import { LiveRefresh } from "@/components/realtime/realtime-provider";
 import { MemberProfile } from "./member-profile";
 import { attendanceSummary, planProgress } from "./attendance";
 import { daysUntil } from "@/lib/format";
+import { hasFaceProfile } from "@/lib/services/attendance";
 
 export async function generateMetadata({ params }: PageProps<"/members/[id]">) {
   const { id } = await params;
@@ -20,12 +21,13 @@ export default async function MemberPage({ params, searchParams }: PageProps<"/m
   const { id } = await params;
   const sp = await searchParams;
   const ctx = await requireCap("members.view");
-  const [p, plans] = await Promise.all([
+  const [p, plans, faceEnrolled] = await Promise.all([
     memberProfile(ctx.gymId, id, { billing: can(ctx.role, "billing.view"), messages: can(ctx.role, "automations.view") }).catch((e) => {
       if (e instanceof NotFoundError) return null;
       throw e;
     }),
     listPlans(ctx.gymId),
+    hasFaceProfile(ctx.gymId, id).catch(() => false),
   ]);
   if (!p) notFound();
   const m = p.member;
@@ -89,6 +91,7 @@ export default async function MemberPage({ params, searchParams }: PageProps<"/m
             : null
         }
         daysLeft={daysUntil(m.expiresAt)}
+        faceEnrolled={faceEnrolled}
         ptPacks={ptPacks.map((x) => ({ id: x.$id, planName: x.planName, used: x.sessionsUsed, total: x.sessionsTotal, endAt: x.endAt }))}
         memberships={p.memberships.map((x) => ({
           id: x.$id,

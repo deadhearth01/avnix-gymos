@@ -1,9 +1,10 @@
 "use client";
 
 import * as React from "react";
-import { AnimatePresence, motion, useReducedMotion } from "motion/react";
+import { motion, useReducedMotion } from "motion/react";
 import QRCode from "qrcode";
-import { BadgeCheck, ChevronLeft, ChevronRight, Download, Printer } from "lucide-react";
+import { BadgeCheck, Download, Printer } from "@/components/icons";
+import { ProfileCard } from "@/components/site/profile-card";
 import { BrandIcon } from "@/components/brand/social-icons";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -28,6 +29,8 @@ export type MemberCardData = {
   streak: number;
 };
 
+const STATUS_LABEL: Record<string, string> = { active: "Active", frozen: "On hold", expired: "Expired", cancelled: "Cancelled", none: "No plan" };
+
 const initials = (name: string) =>
   name
     .split(/\s+/)
@@ -40,7 +43,6 @@ const initials = (name: string) =>
 /** Digital membership card: who the member is, how much of the plan is left, and a QR the front desk scans. */
 export function MemberCard({ open, onClose, gymName, member }: { open: boolean; onClose: () => void; gymName: string; member: MemberCardData }) {
   const [svg, setSvg] = React.useState("");
-  const [slide, setSlide] = React.useState(0);
   const reduced = useReducedMotion();
   const payload = `gymos:member:${member.code ?? ""}`;
 
@@ -67,40 +69,64 @@ export function MemberCard({ open, onClose, gymName, member }: { open: boolean; 
     `Hi ${member.name.split(" ")[0]}, your ${gymName} member code is ${member.code}. Show it at the front desk to check in.`,
   );
   const chips = [member.planName, member.goal, member.trainerName ? `Coach ${member.trainerName}` : null].filter(Boolean) as string[];
-  const slides = ["qr", "code"] as const;
 
   return (
     <Dialog
       open={open}
       onOpenChange={(v) => {
-        if (!v) {
-          onClose();
-          setSlide(0);
-        }
+        if (!v) onClose();
       }}
     >
-      <DialogContent className="max-h-[94dvh] overflow-y-auto p-0 sm:max-w-[760px] md:[&>[data-slot=dialog-close]]:text-white md:[&>[data-slot=dialog-close]]:hover:bg-white/10">
+      <DialogContent className="max-h-[94dvh] overflow-y-auto p-0 sm:max-w-[820px] max-md:[&>[data-slot=dialog-close]]:text-white">
         <DialogTitle className="sr-only">Membership card for {member.name}</DialogTitle>
         <DialogDescription className="sr-only">Member details, plan progress and the QR code used to check in.</DialogDescription>
-        <div className="grid md:grid-cols-[1fr_300px]">
+        <div className="grid md:grid-cols-[340px_minmax(0,1fr)]">
+          {/* Holographic membership card (React Bits ProfileCard engine): tilt, holo shine, glare, cursor glow */}
+          <div className="relative grid place-items-center overflow-hidden bg-[#0d0e11] p-6 max-md:rounded-t-[inherit] md:rounded-l-[inherit] md:p-7">
+            <div aria-hidden className="absolute -top-24 -left-20 size-72 rounded-full bg-primary/35 blur-3xl" />
+            <ProfileCard brand="var(--primary)" name={member.name} title={member.planName ?? "Member"} aspect={0.64} vivid className="w-full max-w-[290px]">
+              <div className="flex h-full flex-col p-5 text-white">
+                <div className="flex items-center justify-between gap-2 text-[11px] font-medium text-white/75">
+                  <span className="truncate">{gymName}</span>
+                  <span className="shrink-0 rounded-full border border-white/20 px-2 py-0.5">{STATUS_LABEL[member.status] ?? "Member"}</span>
+                </div>
+                <div className="mt-6 flex flex-col items-center text-center">
+                  <span className="grid size-[72px] place-items-center rounded-full bg-white/12 font-display text-2xl font-bold ring-1 ring-white/30 backdrop-blur-md">
+                    {initials(member.name)}
+                  </span>
+                  <p className="mt-3 line-clamp-2 font-display text-[22px] leading-tight font-bold tracking-tight">{member.name}</p>
+                  <p className="mt-1 text-xs text-white/70">
+                    {member.planName ?? "No plan"}
+                    {member.expiresAt ? ` · till ${fmtDate(member.expiresAt, "dd MMM yy")}` : ""}
+                  </p>
+                </div>
+                <div className="mt-auto flex items-center gap-3 rounded-2xl border border-white/15 bg-white/10 p-2.5 backdrop-blur-xl">
+                  <div
+                    role="img"
+                    aria-label={`QR code for member ${member.code}`}
+                    className="size-[104px] shrink-0 rounded-xl bg-white p-2 [&_svg]:size-full"
+                    dangerouslySetInnerHTML={{ __html: svg }}
+                  />
+                  <div className="min-w-0">
+                    <p className="font-mono text-lg font-semibold tracking-[0.12em]">{member.code ?? "—"}</p>
+                    <p className="mt-1 text-[11px] leading-snug text-white/65">Scan at the front desk, or say this code</p>
+                  </div>
+                </div>
+              </div>
+            </ProfileCard>
+          </div>
+
           {/* Profile */}
           <div className="p-6 sm:p-7">
             <p className="text-xs font-medium text-muted-foreground">{gymName}</p>
-            <div className="mt-5 flex items-center gap-4">
-              <span className="grid size-16 shrink-0 place-items-center rounded-full bg-primary/12 font-display text-xl font-bold text-primary ring-4 ring-primary/8">
-                {initials(member.name)}
-              </span>
-              <div className="min-w-0">
-                <p className="flex items-center gap-1.5 text-xl font-semibold tracking-tight">
-                  <span className="truncate">{member.name}</span>
-                  {active && <BadgeCheck className="size-5 shrink-0 fill-primary text-primary-foreground" aria-label="Active member" />}
-                </p>
-                <p className="text-sm text-muted-foreground">
-                  {active ? "Active member" : member.status === "frozen" ? "Membership on hold" : "Membership inactive"}
-                  {member.startAt ? ` since ${fmtDate(member.startAt, "dd MMM yyyy")}` : ""}
-                </p>
-              </div>
-            </div>
+            <p className="mt-4 flex items-center gap-1.5 font-display text-2xl font-bold tracking-tight">
+              <span className="truncate">{member.name}</span>
+              {active && <BadgeCheck className="size-5 shrink-0 text-primary" aria-label="Active member" />}
+            </p>
+            <p className="text-sm text-muted-foreground">
+              {active ? "Active member" : member.status === "frozen" ? "Membership on hold" : "Membership inactive"}
+              {member.startAt ? ` since ${fmtDate(member.startAt, "dd MMM yyyy")}` : ""}
+            </p>
 
             {chips.length > 0 && (
               <ul className="mt-5 flex flex-wrap gap-2">
@@ -167,65 +193,6 @@ export function MemberCard({ open, onClose, gymName, member }: { open: boolean; 
               <Button variant="outline" size="icon" aria-label="Print card" onClick={() => window.print()}>
                 <Printer />
               </Button>
-            </div>
-          </div>
-
-          {/* Carousel: QR and manual code */}
-          <div className="relative flex flex-col bg-[#111214] p-6 text-white max-md:rounded-b-[inherit] md:rounded-r-[inherit]">
-            <div className="flex items-center text-xs text-white/60">
-              <span className="md:pr-10">{slide === 0 ? "Scan at the front desk" : "Or type this code"}</span>
-            </div>
-            <div className="relative grid flex-1 place-items-center py-6">
-              <AnimatePresence mode="wait" initial={false}>
-                {slide === 0 ? (
-                  <motion.div
-                    key="qr"
-                    initial={reduced ? false : { opacity: 0, x: 24 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={reduced ? undefined : { opacity: 0, x: -24 }}
-                    transition={{ duration: 0.25 }}
-                    className="w-full max-w-[220px] rounded-2xl bg-white p-4 [&_svg]:h-auto [&_svg]:w-full"
-                    aria-label={`QR code for member ${member.code}`}
-                    role="img"
-                    dangerouslySetInnerHTML={{ __html: svg }}
-                  />
-                ) : (
-                  <motion.div
-                    key="code"
-                    initial={reduced ? false : { opacity: 0, x: 24 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={reduced ? undefined : { opacity: 0, x: -24 }}
-                    transition={{ duration: 0.25 }}
-                    className="text-center"
-                  >
-                    <p className="font-mono text-4xl font-semibold tracking-[0.18em]">{member.code ?? "—"}</p>
-                    <p className="mt-3 text-sm text-white/60">Front desk can enter this code or search by phone number.</p>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
-            <div className="flex items-center justify-between">
-              <button
-                type="button"
-                aria-label="Previous"
-                onClick={() => setSlide((s) => (s + slides.length - 1) % slides.length)}
-                className="grid size-10 place-items-center rounded-full hover:bg-white/10"
-              >
-                <ChevronLeft className="size-5" />
-              </button>
-              <span className="flex gap-1.5" aria-hidden>
-                {slides.map((s, i) => (
-                  <span key={s} className={cn("h-1.5 rounded-full bg-white transition-all", i === slide ? "w-5" : "w-1.5 opacity-40")} />
-                ))}
-              </span>
-              <button
-                type="button"
-                aria-label="Next"
-                onClick={() => setSlide((s) => (s + 1) % slides.length)}
-                className="grid size-10 place-items-center rounded-full hover:bg-white/10"
-              >
-                <ChevronRight className="size-5" />
-              </button>
             </div>
           </div>
         </div>

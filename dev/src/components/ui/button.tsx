@@ -2,7 +2,7 @@ import * as React from "react";
 import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "cn";
 import { Slot } from "radix-ui";
-import { Loader2 } from "lucide-react";
+import { Loader2 } from "@/components/icons";
 
 const buttonVariants = cva(
   "anim-host group/button relative inline-flex shrink-0 items-center justify-center gap-2 rounded-[10px] border border-transparent bg-clip-padding text-sm font-medium whitespace-nowrap transition-[background-color,border-color,color,box-shadow,transform,opacity] duration-200 ease-out outline-none select-none focus-visible:ring-3 focus-visible:ring-ring/30 active:not-aria-[haspopup]:scale-[0.97] disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
@@ -13,7 +13,7 @@ const buttonVariants = cva(
           "bg-primary text-primary-foreground shadow-[inset_0_1px_0_rgb(255_255_255/0.18),0_1px_2px_color-mix(in_oklab,var(--primary)_30%,transparent)] hover:shadow-[inset_0_1px_0_rgb(255_255_255/0.2),0_4px_14px_-4px_color-mix(in_oklab,var(--primary)_55%,transparent)] hover:brightness-[1.06]",
         outline: "border-border bg-card text-foreground shadow-[var(--shadow-card)] hover:bg-muted/70 aria-expanded:bg-muted",
         secondary: "bg-secondary text-secondary-foreground hover:bg-muted-foreground/12",
-        soft: "bg-success-soft text-success-ink hover:bg-success-soft/70",
+        soft: "bg-primary/10 text-primary hover:bg-primary/15",
         ghost: "text-foreground/80 hover:bg-muted hover:text-foreground aria-expanded:bg-muted",
         destructive: "bg-destructive text-white shadow-[0_1px_2px_rgb(220_38_38/0.3)] hover:brightness-110",
         "destructive-soft": "bg-danger-soft text-danger-ink hover:bg-danger-soft/70",

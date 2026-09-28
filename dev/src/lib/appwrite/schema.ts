@@ -23,6 +23,10 @@ export const T = {
   platformInvoices: "platform_invoices",
   rateLimits: "rate_limits",
   dailyStats: "daily_stats",
+  devices: "devices",
+  punches: "punches",
+  faceProfiles: "face_profiles",
+  platformSettings: "platform_settings",
 } as const;
 export type TableId = (typeof T)[keyof typeof T];
 
@@ -61,7 +65,9 @@ export const PLAN_TYPES = ["duration", "sessions", "pt"] as const;
 export const MEMBERSHIP_STATUS = ["active", "upcoming", "frozen", "completed", "cancelled"] as const;
 export const INVOICE_STATUS = ["paid", "partial", "unpaid", "void"] as const;
 export const PAY_METHODS = ["cash", "upi", "card", "bank", "other"] as const;
-export const CHECKIN_METHODS = ["manual", "qr", "biometric", "kiosk"] as const;
+export const CHECKIN_METHODS = ["manual", "qr", "biometric", "kiosk", "fingerprint", "face", "card"] as const;
+export const DEVICE_VENDORS = ["zkteco", "hikvision", "generic", "kiosk"] as const;
+export const PUNCH_RESULTS = ["checked_in", "duplicate", "blocked", "unknown", "ignored"] as const;
 export const LEAD_SOURCES = ["walkin", "whatsapp", "instagram", "facebook", "google", "referral", "website", "other"] as const;
 export const LEAD_STATUS = ["new", "contacted", "trial_booked", "trial_done", "joined", "lost"] as const;
 export const EXPENSE_CATS = ["rent", "salary", "utilities", "equipment", "maintenance", "marketing", "supplements", "software", "other"] as const;
@@ -464,6 +470,75 @@ export const TABLES: TableDef[] = [
       { key: "leads", type: "integer", default: 0 },
     ],
     indexes: [{ key: "gym_day", type: "unique", attributes: ["gymId", "day"] }],
+  },
+  {
+    id: T.devices,
+    name: "Attendance devices",
+    // private: holds the device token hash; only the server reads it
+    access: "private",
+    columns: [
+      gymId,
+      name128(),
+      { key: "vendor", type: "enum", elements: DEVICE_VENDORS, default: "generic" },
+      { key: "serial", type: "varchar", size: 64 },
+      { key: "tokenHash", type: "varchar", size: 64 },
+      { key: "enabled", type: "boolean", default: true },
+      dt("lastSeenAt"),
+      { key: "lastIp", type: "varchar", size: 64 },
+      dt("lastPunchAt"),
+      { key: "punchCount", type: "integer", default: 0 },
+      { key: "info", type: "text" },
+    ],
+    indexes: [
+      { key: "gym", type: "key", attributes: ["gymId"] },
+      { key: "serial", type: "key", attributes: ["serial"] },
+      { key: "token", type: "key", attributes: ["tokenHash"] },
+    ],
+  },
+  {
+    id: T.punches,
+    name: "Device punches",
+    access: "team",
+    columns: [
+      gymId,
+      id36("deviceId"),
+      { key: "deviceName", type: "varchar", size: 128 },
+      { key: "userId", type: "varchar", size: 32, required: true },
+      dt("at", true),
+      { key: "method", type: "enum", elements: CHECKIN_METHODS, default: "biometric" },
+      { key: "result", type: "enum", elements: PUNCH_RESULTS, default: "checked_in" },
+      id36("memberId"),
+      name128("memberName", false),
+      { key: "note", type: "varchar", size: 200 },
+    ],
+    indexes: [
+      { key: "gym_at", type: "key", attributes: ["gymId", "at"] },
+      { key: "gym_device_at", type: "key", attributes: ["gymId", "deviceId", "at"] },
+    ],
+  },
+  {
+    id: T.faceProfiles,
+    name: "Face profiles (embeddings)",
+    // private: biometric embeddings never leave the server
+    access: "private",
+    columns: [
+      gymId,
+      id36("memberId", true),
+      name128("memberName", false),
+      { key: "embeddings", type: "text", required: true },
+      { key: "model", type: "varchar", size: 32 },
+      dt("consentAt", true),
+      name128("consentBy", false),
+    ],
+    indexes: [{ key: "gym_member", type: "unique", attributes: ["gymId", "memberId"] }],
+  },
+  {
+    id: T.platformSettings,
+    name: "Platform settings",
+    // super-admin configuration (row id = setting key, e.g. "pricing")
+    access: "private",
+    columns: [{ key: "value", type: "text", required: true }],
+    indexes: [],
   },
   {
     id: T.rateLimits,

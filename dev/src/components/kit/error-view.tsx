@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { RotateCw, TriangleAlert } from "lucide-react";
+import { RotateCw, TriangleAlert } from "@/components/icons";
 import { Button } from "@/components/ui/button";
 import { AnimatedIcon } from "@/components/kit/animated-icon";
 

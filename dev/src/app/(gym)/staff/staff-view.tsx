@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { Check, KeyRound, Plus, ShieldCheck, Trash2, UsersRound } from "lucide-react";
+import { Check, KeyRound, Plus, ShieldCheck, Trash2, UsersRound } from "@/components/icons";
 import { PageHeader, SectionTitle } from "@/components/kit/page-header";
 import { AnimatedIcon } from "@/components/kit/animated-icon";
 import { DataTable, type Column } from "@/components/kit/data-table";

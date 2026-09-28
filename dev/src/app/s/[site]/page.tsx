@@ -2,7 +2,7 @@ import type { CSSProperties } from "react";
 import type { Metadata } from "next";
 import Image from "next/image";
 import { notFound } from "next/navigation";
-import { ArrowUpRight, MapPin, Phone } from "lucide-react";
+import { ArrowUpRight, MapPin, Phone } from "@/components/icons";
 import { LogoMark } from "@/components/brand/logo";
 import { BrandIcon, type BrandIconName } from "@/components/brand/social-icons";
 import { amenityIcon } from "@/components/site/amenity-icon";

@@ -439,14 +439,24 @@ async function unfreezeMemberLocked(gymId: string, memberId: string) {
 
 /* ─────────────────────────── check-ins ─────────────────────────── */
 
-export async function checkIn(gym: Gym, memberId: string, method: Checkin["method"], actor: Actor) {
+/** Record a visit. `at` is the punch time for device logs that arrive late (defaults to now). One visit per hour. */
+export async function checkIn(gym: Gym, memberId: string, method: Checkin["method"], actor: Actor, at?: Date) {
   const r = repo(gym.$id);
   const member = await r.get<Member>(T.members, memberId);
-  const since = new Date(Date.now() - 60 * 60 * 1000).toISOString();
-  const recent = await r.list<Checkin>(T.checkins, [Query.equal("memberId", memberId), Query.greaterThan("at", since), Query.limit(1)], false);
+  const now = at ?? new Date();
+  const hour = 60 * 60 * 1000;
+  const recent = await r.list<Checkin>(
+    T.checkins,
+    [
+      Query.equal("memberId", memberId),
+      Query.greaterThan("at", new Date(now.getTime() - hour).toISOString()),
+      Query.lessThan("at", new Date(now.getTime() + hour).toISOString()),
+      Query.limit(1),
+    ],
+    false,
+  );
   if (recent.rows[0]) return { member, checkin: recent.rows[0], duplicate: true };
 
-  const now = new Date();
   const checkin = await r.create<Checkin>(T.checkins, {
     memberId,
     memberName: member.name,
@@ -457,7 +467,8 @@ export async function checkIn(gym: Gym, memberId: string, method: Checkin["metho
   });
   const { tables } = adminClient();
   await tables.incrementRowColumn({ databaseId: DB_ID, tableId: T.members, rowId: memberId, column: "visitCount", value: 1 });
-  const updated = await r.update<Member>(T.members, memberId, { lastVisitAt: now.toISOString() });
+  const updated =
+    member.lastVisitAt && new Date(member.lastVisitAt) > now ? member : await r.update<Member>(T.members, memberId, { lastVisitAt: now.toISOString() });
   await bumpStat(gym.$id, { checkins: 1 }, now);
 
   // session-based plans consume a session per visit

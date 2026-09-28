@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { ChartColumn, IndianRupee, Plus, ReceiptText, Trash2, TrendingUp, Wallet } from "lucide-react";
+import { ChartColumn, IndianRupee, Plus, ReceiptText, Trash2, TrendingUp, Wallet } from "@/components/icons";
 import { PageHeader, SectionTitle } from "@/components/kit/page-header";
 import { AnimatedNumber, Stagger, StaggerItem } from "@/components/kit/motion";
 import { StatCard } from "@/components/kit/stat-card";

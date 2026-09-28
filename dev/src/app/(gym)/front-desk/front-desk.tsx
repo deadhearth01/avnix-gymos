@@ -3,7 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { AnimatePresence, motion } from "motion/react";
-import { CircleAlert, CircleCheck, CircleX, Keyboard, Loader2, QrCode, ScanLine, Search, Wallet, X } from "lucide-react";
+import { CircleAlert, CircleCheck, CircleX, Keyboard, Loader2, QrCode, ScanLine, Search, Wallet, X } from "@/components/icons";
 import { PageHeader } from "@/components/kit/page-header";
 import { Button } from "@/components/ui/button";
 import { AnimatedIcon } from "@/components/kit/animated-icon";

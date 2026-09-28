@@ -1,4 +1,4 @@
-import { ShieldQuestion } from "lucide-react";
+import { ShieldQuestion } from "@/components/icons";
 
 export const metadata = { title: "No gym yet" };
 

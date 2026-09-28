@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { Building2, ExternalLink } from "lucide-react";
+import { Building2, ExternalLink } from "@/components/icons";
 import { DataTable, type Column } from "@/components/kit/data-table";
 import { Tag, StatusDot } from "@/components/kit/badges";
 import { BrandMark } from "@/components/shell/sidebar";

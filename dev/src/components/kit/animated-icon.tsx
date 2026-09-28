@@ -1,11 +1,11 @@
 import * as React from "react";
-import type { LucideIcon, LucideProps } from "lucide-react";
+import type { IconComponent, IconProps } from "@/components/icons";
 import { cn } from "@/lib/utils";
 
 export type IconAnimation =
   "bounce" | "wiggle" | "spin" | "ring" | "lift" | "pulse" | "nudge" | "tilt" | "float" | "swing" | "rise" | "shake" | "beat" | "flip" | "none";
 
-/** Sensible default motion per icon, keyed by lucide display name. */
+/** Sensible default motion per icon, keyed by icon display name. */
 const BY_NAME: Record<string, IconAnimation> = {
   House: "bounce",
   Home: "bounce",
@@ -56,6 +56,7 @@ const BY_NAME: Record<string, IconAnimation> = {
   HeartPulse: "beat",
   Heart: "beat",
   MessageCircle: "wiggle",
+  WhatsApp: "wiggle",
   MessageSquare: "wiggle",
   MessagesSquare: "wiggle",
   Send: "nudge",
@@ -120,8 +121,8 @@ const BY_NAME: Record<string, IconAnimation> = {
   Palette: "wiggle",
 };
 
-type Props = Omit<LucideProps, "ref"> & {
-  icon: LucideIcon;
+type Props = Omit<IconProps, "ref"> & {
+  icon: IconComponent;
   animation?: IconAnimation;
   /** animate when the icon itself is hovered (no host needed) */
   self?: boolean;

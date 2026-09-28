@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { AnimatePresence, motion } from "motion/react";
-import { Check, Copy, Eye, EyeOff, KeyRound, Mail, ShieldAlert } from "lucide-react";
+import { Check, Copy, Eye, EyeOff, KeyRound, Mail, ShieldAlert } from "@/components/icons";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { AnimatedIcon } from "@/components/kit/animated-icon";

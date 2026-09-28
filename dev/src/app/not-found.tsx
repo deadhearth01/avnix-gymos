@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Compass } from "lucide-react";
+import { Compass } from "@/components/icons";
 
 export const metadata = { title: "Not found" };
 

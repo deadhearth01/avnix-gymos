@@ -14,6 +14,12 @@ const WELCOME: Step[] = [
   { title: "Welcome to GymOS", body: "A quick look around — about a minute. You can replay this any time from your account menu." },
   { el: nav("/dashboard"), title: "Home", body: "Today at a glance: money collected, dues, who checked in and plans about to expire.", side: "right" },
   { el: nav("/front-desk"), title: "Front desk", body: "Check members in by scanning their QR or searching a name or phone number.", side: "right" },
+  {
+    el: nav("/devices"),
+    title: "Devices",
+    body: "Connect your fingerprint or face machine (eSSL, ZKTeco, Hikvision) or turn any camera into a Face ID kiosk.",
+    side: "right",
+  },
   { el: nav("/members"), title: "Members", body: "Everyone on your books. Sell or renew plans, collect payments, freeze memberships.", side: "right" },
   { el: nav("/leads"), title: "Leads", body: "Trial bookings from your website and walk-in enquiries. Move them along until they join.", side: "right" },
   { el: nav("/billing"), title: "Billing", body: "GST invoices, payments and dues. Everything your accountant asks for.", side: "right" },
@@ -104,7 +110,8 @@ export function OnboardingTour({ seen, enabled, markSeen }: { seen: string[]; en
   const run = React.useCallback(
     async (key: string, steps: Step[]) => {
       const drive = toDriveSteps(steps);
-      if (!drive.length || active.current) return;
+      // never pop over an open dialog or sheet — try again on the next page
+      if (!drive.length || active.current || document.querySelector('[role="dialog"][data-state="open"]')) return;
       const { driver } = await import("driver.js");
       const d = driver({
         steps: drive,

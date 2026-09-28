@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
-import { ArrowLeft, Check, Plus, Trash2 } from "lucide-react";
+import { ArrowLeft, Check, Plus, Trash2 } from "@/components/icons";
 import { Logo } from "@/components/brand/logo";
 import { AffixInput, Field } from "@/components/forms/field";
 import { Button } from "@/components/ui/button";

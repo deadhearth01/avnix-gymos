@@ -3,7 +3,7 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
-import { Building2, CreditCard, KeyRound, Monitor, Moon, Palette, Settings2, Sun, Upload } from "lucide-react";
+import { Building2, CreditCard, KeyRound, Monitor, Moon, Palette, Settings2, Sun, Upload } from "@/components/icons";
 import { PageHeader, SectionTitle } from "@/components/kit/page-header";
 import { TabsBar, useTabParam } from "@/components/kit/tabs-bar";
 import { FadeIn } from "@/components/kit/motion";

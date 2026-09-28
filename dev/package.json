@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "prebuild": "node scripts/sync-face-models.mjs",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
@@ -12,9 +13,12 @@
     "seed:demo": "tsx --conditions=react-server --env-file=.env.local scripts/seed-demo.mts",
     "deploy:site": "tsx --env-file=.env.local scripts/deploy.mts site",
     "deploy:functions": "tsx --env-file=.env.local scripts/deploy.mts functions",
-    "format": "prettier --write src scripts"
+    "format": "prettier --write src scripts",
+    "predev": "node scripts/sync-face-models.mjs"
   },
   "dependencies": {
+    "@phosphor-icons/react": "^2.1.10",
+    "@vladmandic/human": "^3.3.6",
     "appwrite": "^28.1.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
@@ -22,7 +26,6 @@
     "cn": "^0.4.0",
     "date-fns": "^4.4.0",
     "driver.js": "^1.8.0",
-    "lucide-react": "^1.48.0",
     "motion": "^13.4.4",
     "next": "16.3.6",
     "next-themes": "^0.4.6",

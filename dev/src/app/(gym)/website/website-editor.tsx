@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { ArrowDown, ArrowUp, Check, Copy, ExternalLink, ImagePlus, Plus, Trash2, Upload } from "lucide-react";
+import { ArrowDown, ArrowUp, Check, Copy, ExternalLink, ImagePlus, Plus, Trash2, Upload } from "@/components/icons";
 import { PageHeader } from "@/components/kit/page-header";
 import { Field, FormSection, AffixInput } from "@/components/forms/field";
 import { Button } from "@/components/ui/button";
@@ -69,7 +69,7 @@ function ImageDrop({
         setDragging(false);
         if (!disabled) onFiles(Array.from(e.dataTransfer.files));
       }}
-      className={`flex min-h-28 cursor-pointer flex-col items-center justify-center gap-1 rounded-xl border-2 border-dashed px-4 py-3 text-center transition-colors ${dragging ? "border-primary bg-success-soft/40" : "border-border hover:bg-muted/40"} ${disabled ? "pointer-events-none opacity-60" : ""}`}
+      className={`flex min-h-28 cursor-pointer flex-col items-center justify-center gap-1 rounded-xl border-2 border-dashed px-4 py-3 text-center transition-colors ${dragging ? "border-primary bg-primary/8" : "border-border hover:bg-muted/40"} ${disabled ? "pointer-events-none opacity-60" : ""}`}
     >
       {children ?? <Upload className="size-5 text-muted-foreground" />}
       <span className="text-sm font-medium">{label}</span>

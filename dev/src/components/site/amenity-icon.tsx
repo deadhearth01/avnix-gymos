@@ -26,11 +26,11 @@ import {
   Venus,
   Waves,
   Wifi,
-  type LucideIcon,
-} from "lucide-react";
+  type IconComponent,
+} from "@/components/icons";
 
 /** First match wins, so the more specific words come first. */
-const RULES: [RegExp, LucideIcon][] = [
+const RULES: [RegExp, IconComponent][] = [
   [/women|ladies|female/i, Venus],
   [/personal|pt\b|coach|trainer|certified/i, UserCheck],
   [/diet|nutrition|meal|supplement/i, Apple],
@@ -59,6 +59,6 @@ const RULES: [RegExp, LucideIcon][] = [
   [/clean|hygien|sanit/i, Droplets],
 ];
 
-export function amenityIcon(label: string): LucideIcon {
+export function amenityIcon(label: string): IconComponent {
   return RULES.find(([pattern]) => pattern.test(label))?.[1] ?? CircleCheck;
 }

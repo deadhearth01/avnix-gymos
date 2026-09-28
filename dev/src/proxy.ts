@@ -28,6 +28,8 @@ const PROTECTED = [
   "/admin",
   "/staff",
   "/onboarding",
+  "/devices",
+  "/kiosk",
 ];
 
 export function proxy(req: NextRequest) {
@@ -42,7 +44,7 @@ export function proxy(req: NextRequest) {
       return NextResponse.redirect(new URL(`${proto}://${ROOT}${pathname}`));
     }
     // Public gym website. API routes stay reachable for form posts.
-    if (pathname.startsWith("/api/") || pathname.startsWith("/s/")) return NextResponse.next();
+    if (pathname.startsWith("/api/") || pathname.startsWith("/s/") || pathname.startsWith("/iclock/")) return NextResponse.next();
     const key = target.kind === "site" ? target.slug : `~${target.host}`;
     const url = req.nextUrl.clone();
     url.pathname = `/s/${encodeURIComponent(key)}${pathname === "/" ? "" : pathname}`;

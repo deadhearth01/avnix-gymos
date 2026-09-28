@@ -91,6 +91,7 @@ async function deploySite() {
   const file = tarball(process.cwd(), [
     "src",
     "public",
+    "scripts/sync-face-models.mjs",
     "package.json",
     "package-lock.json",
     "next.config.ts",

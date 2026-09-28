@@ -4,7 +4,7 @@ import * as React from "react";
 import { useRouter } from "next/navigation";
 import { Client } from "appwrite";
 
-export type LiveTable = "checkins" | "members" | "payments" | "invoices" | "messages" | "leads" | "memberships";
+export type LiveTable = "checkins" | "members" | "payments" | "invoices" | "messages" | "leads" | "memberships" | "punches";
 type LiveEvent = { table: LiveTable; action: "create" | "update" | "delete"; row: Record<string, unknown> };
 type Listener = (e: LiveEvent) => void;
 
@@ -12,7 +12,7 @@ type TokenFn = () => Promise<{ jwt: string; endpoint: string; project: string; d
 
 const Ctx = React.createContext<{ on: (l: Listener) => () => void; connected: boolean }>({ on: () => () => {}, connected: false });
 
-const TABLES: LiveTable[] = ["checkins", "members", "payments", "invoices", "messages", "leads", "memberships"];
+const TABLES: LiveTable[] = ["checkins", "members", "payments", "invoices", "messages", "leads", "memberships", "punches"];
 
 /**
  * One Appwrite Realtime socket per tab, authenticated with a 15-minute JWT

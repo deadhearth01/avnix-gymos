@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { motion } from "motion/react";
-import { TriangleAlert, CircleHelp } from "lucide-react";
+import { TriangleAlert, CircleHelp } from "@/components/icons";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { emitFeedback } from "@/components/feedback/feedback-provider";

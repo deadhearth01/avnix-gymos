@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { CalendarDays, Dumbbell, Plus, RotateCcw, Star, Ticket, Trash2 } from "lucide-react";
+import { CalendarDays, Dumbbell, Plus, RotateCcw, Star, Ticket, Trash2 } from "@/components/icons";
 import { PageHeader, SectionTitle } from "@/components/kit/page-header";
 import { Stagger, StaggerItem } from "@/components/kit/motion";
 import { AnimatedIcon } from "@/components/kit/animated-icon";

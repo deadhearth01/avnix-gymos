@@ -11,7 +11,7 @@ import {
   CircleAlert,
   HeartPulse,
   Inbox,
-  MessageCircle,
+  WhatsApp,
   Play,
   Receipt,
   RefreshCw,
@@ -22,8 +22,8 @@ import {
   Target,
   Wallet,
   Zap,
-  type LucideIcon,
-} from "lucide-react";
+  type IconComponent,
+} from "@/components/icons";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
@@ -86,7 +86,7 @@ type Msg = {
   by: string | null;
 };
 
-const ICONS: Record<string, LucideIcon> = {
+const ICONS: Record<string, IconComponent> = {
   welcome: Sparkles,
   payment_receipt: Receipt,
   renewal: RefreshCw,
@@ -161,7 +161,7 @@ export function AutomationsView({
             delivery.enabled ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground",
           )}
         >
-          <MessageCircle className="size-5" />
+          <WhatsApp className="size-5" />
         </span>
         <div className="flex-1">
           <p className="text-sm font-semibold">
@@ -575,7 +575,7 @@ function OutboxRow({ m, title, canSend, delivery }: { m: Msg; title: string; can
               }
             >
               <a href={href} target="_blank" rel="noreferrer" data-feedback="success">
-                <MessageCircle /> WhatsApp
+                <WhatsApp /> WhatsApp
               </a>
             </Button>
           )}
@@ -669,7 +669,7 @@ function SendMode({ open, queue, titleOf, onClose }: { open: boolean; queue: Msg
                       setTimeout(next, 400);
                     }}
                   >
-                    <MessageCircle /> Open WhatsApp
+                    <WhatsApp /> Open WhatsApp
                   </a>
                 </Button>
               </div>

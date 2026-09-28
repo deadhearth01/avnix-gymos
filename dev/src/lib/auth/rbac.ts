@@ -25,6 +25,7 @@ export const CAPABILITIES = {
   "automations.manage": ADMIN,
   "messages.send": DESK,
   "website.manage": ADMIN,
+  "devices.manage": ADMIN,
   "settings.manage": OWNER,
   "staff.manage": OWNER,
   "audit.view": ADMIN,

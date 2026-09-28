@@ -2,10 +2,10 @@
 
 import * as React from "react";
 import { AnimatePresence, motion } from "motion/react";
-import { CheckCheck, IndianRupee, MessageCircle, TrendingUp, UsersRound, Zap } from "lucide-react";
+import { CheckCheck, IndianRupee, WhatsApp, TrendingUp, UsersRound, Zap } from "@/components/icons";
 
 const EVENTS = [
-  { icon: MessageCircle, title: "Renewal reminder delivered", body: "Ravi Kumar · 3 days before expiry", tone: "#22c55e" },
+  { icon: WhatsApp, title: "Renewal reminder delivered", body: "Ravi Kumar · 3 days before expiry", tone: "#22c55e" },
   { icon: IndianRupee, title: "₹4,500 collected via UPI", body: "Sneha P. renewed Quarterly", tone: "#a3e635" },
   { icon: UsersRound, title: "New trial booked", body: "From your gym website · 6:30 AM tomorrow", tone: "#60a5fa" },
   { icon: Zap, title: "Win-back sent to 12 members", body: "Telugu + English templates", tone: "#fbbf24" },

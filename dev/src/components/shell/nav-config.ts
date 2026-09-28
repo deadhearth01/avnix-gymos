@@ -13,14 +13,16 @@ import {
   Building2,
   CreditCard,
   ShieldCheck,
-  type LucideIcon,
-} from "lucide-react";
+  Fingerprint,
+  Percent,
+  type IconComponent,
+} from "@/components/icons";
 import type { Capability } from "@/lib/auth/rbac";
 
 export type NavItem = {
   href: string;
   label: string;
-  icon: LucideIcon;
+  icon: IconComponent;
   cap?: Capability;
   countKey?: "members" | "leads" | "outbox";
   keywords?: string;
@@ -31,6 +33,13 @@ export const GYM_NAV: { section?: string; items: NavItem[] }[] = [
     items: [
       { href: "/dashboard", label: "Home", icon: House, cap: "dashboard.view", keywords: "overview kpi" },
       { href: "/front-desk", label: "Front desk", icon: ScanLine, cap: "checkins.create", keywords: "check in attendance scan" },
+      {
+        href: "/devices",
+        label: "Devices",
+        icon: Fingerprint,
+        cap: "devices.manage",
+        keywords: "biometric fingerprint face machine essl zkteco hikvision kiosk",
+      },
       { href: "/members", label: "Members", icon: UsersRound, cap: "members.view", countKey: "members", keywords: "customers clients" },
       { href: "/leads", label: "Leads", icon: Target, cap: "leads.view", countKey: "leads", keywords: "enquiries trials pipeline" },
       { href: "/billing", label: "Billing", icon: ReceiptText, cap: "billing.view", keywords: "invoices payments dues" },
@@ -52,6 +61,7 @@ export const ADMIN_NAV: { section?: string; items: NavItem[] }[] = [
     items: [
       { href: "/admin", label: "Overview", icon: House },
       { href: "/admin/gyms", label: "Gyms", icon: Building2, keywords: "tenants clients" },
+      { href: "/admin/pricing", label: "Pricing", icon: Percent, keywords: "setup fee monthly subscription plans rates" },
       { href: "/admin/billing", label: "Billing", icon: CreditCard, keywords: "subscriptions invoices fees" },
       { href: "/admin/audit", label: "Audit log", icon: ShieldCheck, keywords: "security activity" },
     ],

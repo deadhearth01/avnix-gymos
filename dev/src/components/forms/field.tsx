@@ -90,7 +90,7 @@ export function AffixInput({
   return (
     <div
       className={cn(
-        "flex h-10 items-center rounded-[10px] border border-input bg-card shadow-[var(--shadow-card)] transition-[border-color,box-shadow] duration-200 focus-within:border-primary/60 focus-within:ring-4 focus-within:ring-primary/10 hover:border-foreground/20 has-[[aria-invalid=true]]:border-destructive/60",
+        "flex h-10 items-center rounded-[10px] border border-input bg-card shadow-[var(--shadow-card)] transition-[border-color,box-shadow] duration-200 focus-within:border-primary/60 focus-within:ring-4 focus-within:ring-primary/10 hover:border-foreground/20 has-[[aria-invalid=true]]:border-destructive/60 has-[input:disabled]:bg-muted/50 has-[input:disabled]:text-muted-foreground has-[input:disabled]:shadow-none",
         className,
       )}
     >

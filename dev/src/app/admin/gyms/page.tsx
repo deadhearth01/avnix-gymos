@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Plus } from "lucide-react";
+import { Plus } from "@/components/icons";
 import { PageHeader } from "@/components/kit/page-header";
 import { Button } from "@/components/ui/button";
 import { AnimatedIcon } from "@/components/kit/animated-icon";

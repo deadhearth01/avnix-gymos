@@ -29,6 +29,7 @@ import {
   syncPlatformInvoices,
 } from "@/lib/services/platform";
 import type { Gym } from "@/lib/types";
+import { getPricing, planFor, savePricing, type Pricing } from "@/lib/services/pricing";
 
 const zSid = (prefix: string) =>
   z
@@ -84,13 +85,34 @@ const createSchema = z.object({
   }),
   twilio: z.object({ smsServiceSid: zSid("MG"), whatsappFrom: zWaFrom, whatsappServiceSid: zSid("MG") }),
   emailOwner: z.boolean().default(true),
+  /** From /admin/pricing. Unless custom pricing is allowed and chosen, the plan's fees override the payload. */
+  pricingPlanId: z.string().max(40).optional(),
+  customPricing: z.boolean().default(false),
 });
 export type CreateGymPayload = z.input<typeof createSchema>;
 
 export async function createGymAction(payload: CreateGymPayload) {
   return safe(async () => {
     const { user } = await requireSuperAdmin();
-    const input = createSchema.parse(payload);
+    const parsed = createSchema.parse(payload);
+    const pricing = await getPricing();
+    const custom = parsed.customPricing && pricing.allowCustom;
+    const plan = planFor(pricing, parsed.pricingPlanId);
+    const input = custom
+      ? parsed
+      : {
+          ...parsed,
+          subscription: {
+            ...parsed.subscription,
+            planName: plan.name,
+            setupFee: plan.setupFee,
+            monthlyFee: plan.monthlyFee,
+            billingMonths: plan.billingMonths,
+            gstRate: plan.gstRate,
+            graceDays: plan.graceDays,
+            autoSuspend: plan.autoSuspend,
+          },
+        };
     const result = await createGym(
       { ...input, subscription: { ...input.subscription, billingStartAt: new Date(input.subscription.billingStartAt).toISOString() } },
       user,
@@ -395,4 +417,49 @@ export async function syncAllBillingAction() {
     revalidatePath("/admin", "layout");
     return { synced: subs.rows.length };
   }, "Billing synced");
+}
+
+const pricingSchema = z
+  .object({
+    plans: z
+      .array(
+        z.object({
+          id: z
+            .string()
+            .trim()
+            .regex(/^[a-z0-9-]{1,40}$/),
+          name: z.string().trim().min(1, "Name the plan").max(64),
+          description: z.string().trim().max(160).default(""),
+          setupFee: zMoney,
+          monthlyFee: zMoney,
+          billingMonths: z.coerce.number().int().min(0).max(120),
+          gstRate: z.coerce.number().min(0).max(28),
+          graceDays: z.coerce.number().int().min(0).max(90),
+          autoSuspend: z.boolean(),
+        }),
+      )
+      .min(1, "Keep at least one plan")
+      .max(12),
+    defaultPlanId: z.string(),
+    allowCustom: z.boolean(),
+  })
+  .refine((p) => p.plans.some((x) => x.id === p.defaultPlanId), { path: ["defaultPlanId"], message: "Pick a default plan" })
+  .refine((p) => new Set(p.plans.map((x) => x.id)).size === p.plans.length, { path: ["plans"], message: "Plan names must be different" });
+
+/** AvniX price list (setup + monthly fees) used when creating gyms. */
+export async function savePricingAction(payload: z.input<typeof pricingSchema>) {
+  return safe(async () => {
+    const { user } = await requireSuperAdmin();
+    const pricing: Pricing = pricingSchema.parse(payload);
+    await savePricing(pricing);
+    await audit({
+      actor: user,
+      action: "pricing.update",
+      entity: "platform",
+      entityId: "pricing",
+      summary: pricing.plans.map((p) => `${p.name}: ₹${p.setupFee} + ₹${p.monthlyFee}/mo`).join("; "),
+    });
+    revalidatePath("/admin/pricing");
+    revalidatePath("/admin/gyms/new");
+  }, "Pricing saved");
 }

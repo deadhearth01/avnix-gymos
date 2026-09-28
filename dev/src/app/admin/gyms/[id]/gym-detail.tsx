@@ -15,7 +15,7 @@ import {
   LayoutDashboard,
   Link,
   Loader2,
-  MessageCircle,
+  WhatsApp,
   Power,
   RefreshCw,
   ShieldCheck,
@@ -23,7 +23,7 @@ import {
   TriangleAlert,
   UsersRound,
   Wallet,
-} from "lucide-react";
+} from "@/components/icons";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
@@ -190,7 +190,7 @@ export function GymDetail(props: {
           },
           { value: "access", label: "Access & login", icon: ShieldCheck },
           { value: "website", label: "Website & domain", icon: Globe },
-          { value: "messaging", label: "SMS & WhatsApp", icon: MessageCircle },
+          { value: "messaging", label: "SMS & WhatsApp", icon: WhatsApp },
         ]}
       />
 
@@ -1034,7 +1034,7 @@ function MessagingTab({ gym }: { gym: GymInfo }) {
           </Field>
           <Field label="WhatsApp sender number" hint="An approved WhatsApp sender on the AvniX Twilio account (E.164).">
             <AffixInput
-              leading={<MessageCircle className="size-4" />}
+              leading={<WhatsApp className="size-4" />}
               value={f.whatsappFrom}
               onChange={(e) => setF({ ...f, whatsappFrom: e.target.value })}
               placeholder="+91 98765 43210"

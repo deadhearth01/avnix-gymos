@@ -4,7 +4,7 @@ import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "motion/react";
-import { ArrowRight, Check, CircleX, Globe, Loader2, MessageCircle, Sparkles } from "lucide-react";
+import { ArrowRight, Check, CircleX, Globe, Loader2, WhatsApp, Sparkles } from "@/components/icons";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
@@ -17,13 +17,17 @@ import { inr } from "@/lib/format";
 import { slugify } from "@/lib/domain/slug";
 import { checkSlugAction, createGymAction, suggestSlugAction, type CreateGymPayload } from "../../actions";
 import { CredentialsReveal, type RevealData } from "../credentials-reveal";
+import type { Pricing, PricingPlan } from "@/lib/services/pricing";
 
+/** The form column is narrow next to the summary rail, so sections stack until very wide screens. */
+const SECTION = "lg:grid-cols-1 lg:gap-5 2xl:grid-cols-[220px_minmax(0,1fr)] 2xl:gap-10";
 const ROOT = process.env.NEXT_PUBLIC_ROOT_DOMAIN || "gym.avnix.in";
 const today = () => new Date().toISOString().slice(0, 10);
 
 type Errors = Record<string, string[] | undefined>;
 
-export function NewGymForm() {
+export function NewGymForm({ pricing }: { pricing: Pricing }) {
+  const defaultPlan = pricing.plans.find((pl) => pl.id === pricing.defaultPlanId) ?? pricing.plans[0];
   const router = useRouter();
   const [f, setF] = React.useState({
     onboarding: true,
@@ -36,15 +40,17 @@ export function NewGymForm() {
     ownerName: "",
     ownerEmail: "",
     ownerPhone: "",
-    planName: "Growth",
-    setupFee: "15000",
+    pricingPlanId: defaultPlan.id,
+    customPricing: false,
+    planName: defaultPlan.name,
+    setupFee: String(defaultPlan.setupFee),
     setupFeeStatus: "due" as "due" | "paid" | "waived",
-    monthlyFee: "1999",
-    billingMonths: "12",
+    monthlyFee: String(defaultPlan.monthlyFee),
+    billingMonths: String(defaultPlan.billingMonths),
     billingStartAt: today(),
-    gstRate: "18",
-    autoSuspend: false,
-    graceDays: "7",
+    gstRate: String(defaultPlan.gstRate),
+    autoSuspend: defaultPlan.autoSuspend,
+    graceDays: String(defaultPlan.graceDays),
     smsServiceSid: "",
     whatsappFrom: "",
     whatsappServiceSid: "",
@@ -58,6 +64,19 @@ export function NewGymForm() {
   const [created, setCreated] = React.useState<string | null>(null);
 
   const set = <K extends keyof typeof f>(k: K, v: (typeof f)[K]) => setF((s) => ({ ...s, [k]: v }));
+  const choosePlan = (pl: PricingPlan) =>
+    setF((s) => ({
+      ...s,
+      pricingPlanId: pl.id,
+      planName: pl.name,
+      setupFee: String(pl.setupFee),
+      monthlyFee: String(pl.monthlyFee),
+      billingMonths: String(pl.billingMonths),
+      gstRate: String(pl.gstRate),
+      graceDays: String(pl.graceDays),
+      autoSuspend: pl.autoSuspend,
+    }));
+  const locked = !f.customPricing;
 
   // slug follows the name until the user edits it
   const slug = slugTouched ? f.slug : slugify(f.name);
@@ -113,6 +132,8 @@ export function NewGymForm() {
       },
       twilio: { smsServiceSid: f.smsServiceSid, whatsappFrom: f.whatsappFrom, whatsappServiceSid: f.whatsappServiceSid },
       emailOwner: f.emailOwner,
+      pricingPlanId: f.pricingPlanId,
+      customPricing: f.customPricing,
     };
     start(async () => {
       const r = await createGymAction(payload);
@@ -147,7 +168,7 @@ export function NewGymForm() {
     <>
       <form onSubmit={submit} className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_340px]" noValidate>
         <div className="surface px-5 py-7 sm:px-7">
-          <FormSection title="Who sets it up?" description="Let the owner fill in their own details, or do the full setup yourself.">
+          <FormSection className={SECTION} title="Who sets it up?" description="Let the owner fill in their own details, or do the full setup yourself.">
             <div className="grid gap-2 sm:col-span-2 sm:grid-cols-2" role="radiogroup" aria-label="Setup mode">
               {(
                 [
@@ -180,6 +201,7 @@ export function NewGymForm() {
           </FormSection>
 
           <FormSection
+            className={SECTION}
             title="Gym"
             description={
               f.onboarding
@@ -277,7 +299,11 @@ export function NewGymForm() {
             )}
           </FormSection>
 
-          <FormSection title="Owner login" description="We create the owner's account with a strong one-time password. They'll be asked to change it.">
+          <FormSection
+            className={SECTION}
+            title="Owner login"
+            description="We create the owner's account with a strong one-time password. They'll be asked to change it."
+          >
             <Field label="Owner name" required error={err("owner.name")}>
               <Input value={f.ownerName} onChange={(e) => set("ownerName", e.target.value)} placeholder="Ravi Teja" autoComplete="off" />
             </Field>
@@ -302,15 +328,60 @@ export function NewGymForm() {
             </label>
           </FormSection>
 
-          <FormSection title="Subscription & fees" description="What AvniX charges this gym. Invoices are generated automatically every month.">
+          <FormSection
+            className={SECTION}
+            title="Subscription & fees"
+            description="What AvniX charges this gym, from your Pricing page. Invoices are generated automatically every month."
+          >
+            <div className="grid gap-2 sm:col-span-2 sm:grid-cols-2" role="radiogroup" aria-label="Pricing plan">
+              {pricing.plans.map((pl) => (
+                <button
+                  key={pl.id}
+                  type="button"
+                  role="radio"
+                  aria-checked={f.pricingPlanId === pl.id}
+                  onClick={() => choosePlan(pl)}
+                  className={`rounded-xl border p-3.5 text-left transition-[border-color,box-shadow] ${f.pricingPlanId === pl.id ? "border-primary ring-3 ring-primary/15" : "hover:border-foreground/25"}`}
+                >
+                  <span className="flex items-baseline justify-between gap-2">
+                    <span className="text-sm font-semibold">{pl.name}</span>
+                    <span className="text-sm font-semibold tabular-nums">
+                      {inr(pl.monthlyFee)}
+                      <span className="text-xs font-normal text-muted-foreground">/mo</span>
+                    </span>
+                  </span>
+                  <span className="mt-0.5 block text-xs text-muted-foreground">
+                    {inr(pl.setupFee)} setup · {pl.billingMonths ? `${pl.billingMonths} months` : "until cancelled"}
+                    {pl.description ? ` · ${pl.description}` : ""}
+                  </span>
+                </button>
+              ))}
+            </div>
+            {pricing.allowCustom ? (
+              <label className="flex items-center justify-between gap-4 rounded-xl border bg-muted/30 px-4 py-3 sm:col-span-2">
+                <span>
+                  <span className="block text-sm font-medium">Custom pricing for this gym</span>
+                  <span className="block text-xs text-muted-foreground">Override the plan’s fees just for this gym.</span>
+                </span>
+                <Switch checked={f.customPricing} onCheckedChange={(v) => set("customPricing", v)} />
+              </label>
+            ) : (
+              <p className="text-xs text-muted-foreground sm:col-span-2">Fees are fixed by your Pricing page.</p>
+            )}
             <Field label="Plan name" error={err("subscription.planName")}>
-              <Input value={f.planName} onChange={(e) => set("planName", e.target.value)} placeholder="Growth" />
+              <Input value={f.planName} disabled={locked} onChange={(e) => set("planName", e.target.value)} placeholder="Growth" />
             </Field>
             <Field label="Billing starts" required error={err("subscription.billingStartAt")}>
               <Input type="date" value={f.billingStartAt} onChange={(e) => set("billingStartAt", e.target.value)} />
             </Field>
-            <Field label="Initial setup fee" error={err("subscription.setupFee")} hint="One-time onboarding, migration & training.">
-              <AffixInput leading="₹" value={f.setupFee} onChange={(e) => set("setupFee", e.target.value.replace(/[^\d.]/g, ""))} inputMode="decimal" />
+            <Field label="Setup fee" error={err("subscription.setupFee")} hint="One-time onboarding, migration & training.">
+              <AffixInput
+                leading="₹"
+                value={f.setupFee}
+                disabled={locked}
+                onChange={(e) => set("setupFee", e.target.value.replace(/[^\d.]/g, ""))}
+                inputMode="decimal"
+              />
             </Field>
             <Field label="Setup fee status">
               <Select value={f.setupFeeStatus} onValueChange={(v) => set("setupFeeStatus", v as typeof f.setupFeeStatus)}>
@@ -324,11 +395,12 @@ export function NewGymForm() {
                 </SelectContent>
               </Select>
             </Field>
-            <Field label="Monthly maintenance & service fee" error={err("subscription.monthlyFee")}>
+            <Field label="Monthly fee" error={err("subscription.monthlyFee")}>
               <AffixInput
                 leading="₹"
                 trailing="/ month"
                 value={f.monthlyFee}
+                disabled={locked}
                 onChange={(e) => set("monthlyFee", e.target.value.replace(/[^\d.]/g, ""))}
                 inputMode="decimal"
               />
@@ -337,6 +409,7 @@ export function NewGymForm() {
               <AffixInput
                 trailing="months"
                 value={f.billingMonths}
+                disabled={locked}
                 onChange={(e) => set("billingMonths", e.target.value.replace(/\D/g, "").slice(0, 3))}
                 inputMode="numeric"
               />
@@ -345,6 +418,7 @@ export function NewGymForm() {
               <AffixInput
                 trailing="%"
                 value={f.gstRate}
+                disabled={locked}
                 onChange={(e) => set("gstRate", e.target.value.replace(/[^\d.]/g, "").slice(0, 5))}
                 inputMode="decimal"
               />
@@ -353,6 +427,7 @@ export function NewGymForm() {
               <AffixInput
                 trailing="days"
                 value={f.graceDays}
+                disabled={locked}
                 onChange={(e) => set("graceDays", e.target.value.replace(/\D/g, "").slice(0, 2))}
                 inputMode="numeric"
               />
@@ -364,11 +439,15 @@ export function NewGymForm() {
                   If an invoice is unpaid past the grace period, the gym&apos;s dashboard is paused until you re-enable it.
                 </span>
               </span>
-              <Switch checked={f.autoSuspend} onCheckedChange={(v) => set("autoSuspend", v)} />
+              <Switch checked={f.autoSuspend} disabled={locked} onCheckedChange={(v) => set("autoSuspend", v)} />
             </label>
           </FormSection>
 
-          <FormSection title="SMS & WhatsApp" description="Runs under the AvniX Twilio account. Add this gym's senders now or later from the gym page.">
+          <FormSection
+            className={SECTION}
+            title="SMS & WhatsApp"
+            description="Runs under the AvniX Twilio account. Add this gym's senders now or later from the gym page."
+          >
             <Field
               label="SMS Messaging Service SID"
               optional
@@ -385,14 +464,14 @@ export function NewGymForm() {
             </Field>
             <Field label="WhatsApp sender number" optional error={err("twilio.whatsappFrom")} hint="An approved WhatsApp number on the AvniX account.">
               <AffixInput
-                leading={<MessageCircle className="size-4" />}
+                leading={<WhatsApp className="size-4" />}
                 value={f.whatsappFrom}
                 onChange={(e) => set("whatsappFrom", e.target.value)}
                 placeholder="+91 98765 43210"
                 inputMode="tel"
               />
             </Field>
-            <Field label="…or WhatsApp Messaging Service SID" optional error={err("twilio.whatsappServiceSid")}>
+            <Field label="Or WhatsApp service SID" optional error={err("twilio.whatsappServiceSid")}>
               <Input value={f.whatsappServiceSid} onChange={(e) => set("whatsappServiceSid", e.target.value.trim())} placeholder="MG…" className="font-mono" />
             </Field>
           </FormSection>

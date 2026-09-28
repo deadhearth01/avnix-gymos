@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Building2, CircleAlert, IndianRupee, Plus, TrendingUp, Wallet } from "lucide-react";
+import { Building2, CircleAlert, IndianRupee, Plus, TrendingUp, Wallet } from "@/components/icons";
 import { PageHeader, SectionTitle } from "@/components/kit/page-header";
 import { StatCard } from "@/components/kit/stat-card";
 import { Stagger, StaggerItem } from "@/components/kit/motion";

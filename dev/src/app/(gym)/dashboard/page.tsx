@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { after } from "next/server";
-import { AlarmClock, CalendarClock, HeartPulse, IndianRupee, Plus, ReceiptText, ScanLine, UserPlus, UsersRound, Wallet } from "lucide-react";
+import { AlarmClock, CalendarClock, HeartPulse, IndianRupee, Plus, ReceiptText, ScanLine, UserPlus, UsersRound, Wallet } from "@/components/icons";
 import { PageHeader, SectionTitle } from "@/components/kit/page-header";
 import { StatCard } from "@/components/kit/stat-card";
 import { Stagger, StaggerItem } from "@/components/kit/motion";

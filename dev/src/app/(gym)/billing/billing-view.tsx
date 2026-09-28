@@ -4,7 +4,7 @@ import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "motion/react";
-import { Download, FileText, IndianRupee, Landmark, Loader2, MessageCircle, Percent, ReceiptText, Search, Wallet } from "lucide-react";
+import { Download, FileText, IndianRupee, Landmark, Loader2, WhatsApp, Percent, ReceiptText, Search, Wallet } from "@/components/icons";
 import { DataTable, type Column } from "@/components/kit/data-table";
 import { TabsBar, useTabParam } from "@/components/kit/tabs-bar";
 import { Tag, type Tone } from "@/components/kit/badges";
@@ -242,7 +242,7 @@ export function BillingView({
             data-feedback="success"
             className="anim-host inline-flex h-8 items-center gap-1 rounded-lg bg-success-soft px-2.5 text-xs font-medium text-success-ink hover:bg-success-soft/70"
           >
-            <AnimatedIcon icon={MessageCircle} className="size-3.5" /> Remind
+            <AnimatedIcon icon={WhatsApp} className="size-3.5" /> Remind
           </a>
           <Button size="sm" asChild>
             <Link href={`/members/${r.id}?action=collect`}>Collect</Link>

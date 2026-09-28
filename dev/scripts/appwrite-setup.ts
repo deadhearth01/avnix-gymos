@@ -120,6 +120,22 @@ async function ensureTable(t: TableDef) {
   const missing = t.columns.filter((c) => !have.has(c.key));
   for (const c of missing) await addColumn(t.id, c);
   if (missing.length) await waitColumns(t.id);
+  // enums only ever grow: add new elements to existing enum columns
+  for (const c of t.columns) {
+    if (c.type !== "enum" || !have.has(c.key)) continue;
+    const live = (columns as { key: string; elements?: string[]; default?: string | null; required?: boolean }[]).find((x) => x.key === c.key);
+    const extra = c.elements.filter((e) => !live?.elements?.includes(e));
+    if (!live || !extra.length) continue;
+    await db.updateEnumColumn({
+      databaseId: DB_ID,
+      tableId: t.id,
+      key: c.key,
+      elements: [...new Set([...(live.elements ?? []), ...c.elements])],
+      required: live.required ?? false,
+      xdefault: (live.default ?? null) as never,
+    });
+    log(`  ~ enum ${t.id}.${c.key} += ${extra.join(", ")}`);
+  }
 
   const { indexes } = await db.listIndexes({ databaseId: DB_ID, tableId: t.id, queries: [Query.limit(100)] });
   const haveIdx = new Set((indexes as { key: string }[]).map((i) => i.key));

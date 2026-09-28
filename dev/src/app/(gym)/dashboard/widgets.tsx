@@ -3,7 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { AnimatePresence, motion } from "motion/react";
-import { MessageCircle, ScanLine } from "lucide-react";
+import { WhatsApp, ScanLine } from "@/components/icons";
 import { AreaTrend } from "@/components/charts/area-trend";
 import { Segmented } from "@/components/kit/segmented";
 import { PersonAvatar } from "@/components/kit/person-avatar";
@@ -122,7 +122,7 @@ export function WaButton({ phone, text, label = "WhatsApp" }: { phone: string; t
       className="anim-host inline-flex h-7 items-center gap-1 rounded-lg bg-success-soft px-2 text-xs font-medium text-success-ink transition-colors hover:bg-success-soft/70"
       aria-label={`${label} ${phone}`}
     >
-      <AnimatedIcon icon={MessageCircle} className="size-3.5" /> {label}
+      <AnimatedIcon icon={WhatsApp} className="size-3.5" /> {label}
     </a>
   );
 }

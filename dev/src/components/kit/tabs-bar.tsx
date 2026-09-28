@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { motion } from "motion/react";
-import type { LucideIcon } from "lucide-react";
+import type { IconComponent } from "@/components/icons";
 import { AnimatedIcon } from "@/components/kit/animated-icon";
 import { cn } from "@/lib/utils";
 
@@ -14,7 +14,7 @@ export function TabsBar<T extends string>({
   className,
   layoutId = "tabs-underline",
 }: {
-  tabs: { value: T; label: string; icon?: LucideIcon; badge?: React.ReactNode }[];
+  tabs: { value: T; label: string; icon?: IconComponent; badge?: React.ReactNode }[];
   value: T;
   onChange: (v: T) => void;
   className?: string;

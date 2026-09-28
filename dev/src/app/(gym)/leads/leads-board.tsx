@@ -3,7 +3,7 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "motion/react";
-import { CalendarClock, Clock, GripVertical, MessageCircle, MoreHorizontal, Phone, Plus, Search, Target, Trash2, UserCheck, X } from "lucide-react";
+import { CalendarClock, Clock, GripVertical, WhatsApp, MoreHorizontal, Phone, Plus, Search, Target, Trash2, UserCheck, X } from "@/components/icons";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -299,7 +299,7 @@ export function LeadsBoard({
                               onClick={() => l.status === "new" && canEdit && move(l, "contacted")}
                               className="anim-host grid size-7 place-items-center rounded-lg text-success-ink hover:bg-success-soft"
                             >
-                              <AnimatedIcon icon={MessageCircle} className="size-3.5" />
+                              <AnimatedIcon icon={WhatsApp} className="size-3.5" />
                             </a>
                             {canEdit && (
                               <DropdownMenu>

@@ -3,7 +3,7 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { Command } from "cmdk";
-import { CornerDownLeft, Loader2, Search, UserRound, type LucideIcon } from "lucide-react";
+import { CornerDownLeft, Loader2, Search, UserRound, type IconComponent } from "@/components/icons";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { AnimatedIcon } from "@/components/kit/animated-icon";
 import { PersonAvatar } from "@/components/kit/person-avatar";
@@ -12,7 +12,7 @@ import { emitFeedback } from "@/components/feedback/feedback-provider";
 export type PaletteAction = {
   id: string;
   label: string;
-  icon: LucideIcon;
+  icon: IconComponent;
   group: string;
   href?: string;
   run?: () => void;

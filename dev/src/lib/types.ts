@@ -2,6 +2,8 @@ import type { Models } from "node-appwrite";
 import type {
   CHANNELS,
   CHECKIN_METHODS,
+  DEVICE_VENDORS,
+  PUNCH_RESULTS,
   DOMAIN_STATUS,
   EXPENSE_CATS,
   FEE_STATUS,
@@ -204,6 +206,43 @@ export type Checkin = Row & {
   dayKey: string;
   method: E<typeof CHECKIN_METHODS>;
   by: string | null;
+};
+
+export type Device = Row & {
+  gymId: string;
+  name: string;
+  vendor: E<typeof DEVICE_VENDORS>;
+  serial: string | null;
+  tokenHash: string | null;
+  enabled: boolean;
+  lastSeenAt: string | null;
+  lastIp: string | null;
+  lastPunchAt: string | null;
+  punchCount: number;
+  info: string | null;
+};
+
+export type Punch = Row & {
+  gymId: string;
+  deviceId: string | null;
+  deviceName: string | null;
+  userId: string;
+  at: string;
+  method: E<typeof CHECKIN_METHODS>;
+  result: E<typeof PUNCH_RESULTS>;
+  memberId: string | null;
+  memberName: string | null;
+  note: string | null;
+};
+
+export type FaceProfile = Row & {
+  gymId: string;
+  memberId: string;
+  memberName: string | null;
+  embeddings: string;
+  model: string | null;
+  consentAt: string;
+  consentBy: string | null;
 };
 
 export type Lead = Row & {

@@ -3,7 +3,7 @@
 import * as React from "react";
 import { useActionState } from "react";
 import { motion, AnimatePresence, useAnimate } from "motion/react";
-import { ArrowRight, Eye, EyeOff, Lock, Mail, TriangleAlert } from "lucide-react";
+import { ArrowRight, Eye, EyeOff, Lock, Mail, TriangleAlert } from "@/components/icons";
 import { loginAction, type LoginState } from "./actions";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";

@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { motion } from "motion/react";
-import { Banknote, Check, CreditCard, Landmark, QrCode } from "lucide-react";
+import { Banknote, Check, CreditCard, Landmark, QrCode } from "@/components/icons";
 import { AffixInput, Field } from "@/components/forms/field";
 import { Input } from "@/components/ui/input";
 import { computeInvoice } from "@/lib/domain/gst";

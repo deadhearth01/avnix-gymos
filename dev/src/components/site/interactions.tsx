@@ -3,7 +3,7 @@
 import * as React from "react";
 import Image from "next/image";
 import { motion, useReducedMotion } from "motion/react";
-import { ArrowLeft, ArrowRight, Check, Menu, X } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check, Menu, X } from "@/components/icons";
 import { BrandIcon } from "@/components/brand/social-icons";
 import { Field } from "@/components/forms/field";
 import { Button } from "@/components/ui/button";

@@ -4,7 +4,7 @@ import * as React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { AnimatePresence, motion } from "motion/react";
-import { ChevronsUpDown, Compass, PanelLeftClose, PanelLeft, Search, LifeBuoy, LogOut, ShieldCheck, Check, Volume2, Sparkles } from "lucide-react";
+import { ChevronsUpDown, Compass, PanelLeftClose, PanelLeft, Search, LifeBuoy, LogOut, ShieldCheck, Check, Volume2, Sparkles } from "@/components/icons";
 import { AnimatedIcon } from "@/components/kit/animated-icon";
 import { LogoTile } from "@/components/brand/logo";
 import { PersonAvatar } from "@/components/kit/person-avatar";

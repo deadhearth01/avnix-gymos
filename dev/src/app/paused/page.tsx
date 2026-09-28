@@ -1,4 +1,4 @@
-import { PauseCircle } from "lucide-react";
+import { PauseCircle } from "@/components/icons";
 import { getSession } from "@/lib/auth/session";
 
 export const metadata = { title: "Access paused" };
