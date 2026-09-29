@@ -22,6 +22,11 @@ const csp = [
 const nextConfig: NextConfig = {
   poweredByHeader: false,
   reactStrictMode: true,
+  experimental: {
+    // Browser-side router cache: revisiting a page within these windows is instant (no server round trip).
+    // Any save clears it (server actions revalidate), and live pages refresh themselves on realtime events.
+    staleTimes: { dynamic: 45, static: 90 },
+  },
   async headers() {
     return [
       {

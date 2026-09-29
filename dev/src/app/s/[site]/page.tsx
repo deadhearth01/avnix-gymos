@@ -10,7 +10,7 @@ import { BookingProvider, Gallery, OpenState, SiteAnchor, SiteHeader, TrainerCar
 import { buttonTone, formatHours } from "@/components/site/tone";
 import { fmtPhone, inr, toE164 } from "@/lib/format";
 import { mediaUrl, parseSite, resolveSite, safeBrandColor, sitePlans } from "@/lib/queries/site";
-import { preset } from "@/lib/site/presets";
+import { defaultLogoFor, preset, presetUrl } from "@/lib/site/presets";
 import { siteUrl } from "@/lib/site/url";
 import type { Gym, GymSite, Plan } from "@/lib/types";
 
@@ -51,6 +51,11 @@ function directionsUrl(site: GymSite, gym: Gym) {
   return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent([gym.name, gym.address, gym.city].filter(Boolean).join(", "))}`;
 }
 
+/** Relative bundled paths ("/site-defaults/…") → absolute URLs for search engines. */
+function absolute(path: string | null | undefined, base: string) {
+  return path ? (path.startsWith("/") ? `${base}${path}` : path) : undefined;
+}
+
 function safeLink(value: string | undefined) {
   return value && /^https:\/\//i.test(value) ? value : null;
 }
@@ -80,7 +85,7 @@ export async function generateMetadata({ params }: PageProps<"/s/[site]">): Prom
     site.about ||
     `${gym.name} is a gym${place} with coaching, strength and cardio training. See memberships and personal training rates, and book a free trial.`
   ).slice(0, 180);
-  const logo = mediaUrl(gym.logoFileId, 256);
+  const logo = mediaUrl(gym.logoFileId, 256) ?? presetUrl(defaultLogoFor(gym.$id));
   return {
     metadataBase: new URL(url),
     title: { absolute: title },
@@ -139,7 +144,7 @@ function jsonLd(gym: Gym, site: GymSite, plans: Plan[], url: string, image: stri
     telephone: toE164(gym.phone) ?? undefined,
     email: gym.email ?? undefined,
     image: image ?? undefined,
-    logo: mediaUrl(gym.logoFileId, 512) ?? undefined,
+    logo: absolute(mediaUrl(gym.logoFileId, 512) ?? presetUrl(defaultLogoFor(gym.$id)), url),
     address:
       gym.address || gym.city
         ? { "@type": "PostalAddress", streetAddress: gym.address ?? undefined, addressLocality: gym.city ?? undefined, addressCountry: "IN" }
@@ -182,7 +187,7 @@ export default async function SitePage({ params }: PageProps<"/s/[site]">) {
   const showPrices = site.showPrices !== false;
   const showTrial = site.showTrial !== false;
 
-  const logo = mediaUrl(gym.logoFileId, 120);
+  const logo = mediaUrl(gym.logoFileId, 120) ?? presetUrl(defaultLogoFor(gym.$id));
   const hero = mediaUrl(site.heroFileId || preset("hero-deadlift"), 2000)!;
   const photos = (site.gallery ?? []).map((id) => mediaUrl(id, 1400)).filter((u): u is string => !!u);
   // With enough photos, the last one moves up beside the intro instead of repeating in the gallery.

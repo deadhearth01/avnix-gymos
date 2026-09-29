@@ -8,6 +8,7 @@ import { AnimatedIcon } from "@/components/kit/animated-icon";
 import { BarTrackChart } from "@/components/charts/bar-track";
 import { Tag, StatusDot } from "@/components/kit/badges";
 import { BrandMark } from "@/components/shell/sidebar";
+import { mediaUrl } from "@/lib/media";
 import { EmptyState } from "@/components/kit/empty-state";
 import { adminOverview } from "@/lib/queries/admin";
 import { ago, fmtDate, inr, pct } from "@/lib/format";
@@ -75,7 +76,7 @@ export default async function AdminOverview() {
                     href={`/admin/gyms/${inv.gymId}?tab=billing`}
                     className="anim-host flex items-center gap-3 rounded-xl px-2 py-2.5 transition-colors hover:bg-muted"
                   >
-                    <BrandMark name={inv.gymName} size={30} />
+                    <BrandMark name={inv.gymName} seed={inv.gymId} size={30} />
                     <span className="min-w-0 flex-1">
                       <span className="block truncate text-sm font-medium">{inv.gymName}</span>
                       <span className="block text-xs text-muted-foreground">
@@ -122,7 +123,7 @@ export default async function AdminOverview() {
                 href={`/admin/gyms/${g.$id}`}
                 className="anim-host flex items-center gap-3 rounded-xl border p-3 transition-all hover:-translate-y-0.5 hover:shadow-[var(--shadow-float)]"
               >
-                <BrandMark name={g.name} color={g.brandColor} size={38} />
+                <BrandMark name={g.name} color={g.brandColor} logoUrl={mediaUrl(g.logoFileId, { width: 96, height: 96 })} seed={g.$id} size={38} />
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-sm font-semibold">{g.name}</span>
                   <span className="block truncate text-xs text-muted-foreground">

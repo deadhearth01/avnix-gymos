@@ -44,7 +44,7 @@ export function PlatformBilling({ invoices }: { invoices: Inv[] }) {
       sort: (r) => r.gymName.toLowerCase(),
       cell: (r) => (
         <Link href={`/admin/gyms/${r.gymId}?tab=billing`} className="flex items-center gap-2.5 hover:underline">
-          <BrandMark name={r.gymName} size={28} /> <span className="truncate text-sm font-medium">{r.gymName}</span>
+          <BrandMark name={r.gymName} seed={r.gymId} size={28} /> <span className="truncate text-sm font-medium">{r.gymName}</span>
         </Link>
       ),
     },

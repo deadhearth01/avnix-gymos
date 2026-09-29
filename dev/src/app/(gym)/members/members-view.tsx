@@ -306,7 +306,7 @@ export function MembersView({
               <AnimatedIcon icon={Download} />
             </Button>
             {canEdit && (
-              <Button onClick={() => setSheet(true)}>
+              <Button data-tour="add-member" onClick={() => setSheet(true)}>
                 <AnimatedIcon icon={UserPlus} /> Add member
               </Button>
             )}

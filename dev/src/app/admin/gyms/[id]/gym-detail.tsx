@@ -37,6 +37,8 @@ import { AnimatedIcon } from "@/components/kit/animated-icon";
 import { Field, AffixInput } from "@/components/forms/field";
 import { StatusDot, Tag, type Tone } from "@/components/kit/badges";
 import { BrandMark } from "@/components/shell/sidebar";
+import { LogoPicker } from "@/components/brand/logo-picker";
+import { mediaUrl } from "@/lib/media";
 import { PersonAvatar } from "@/components/kit/person-avatar";
 import { useConfirm } from "@/components/kit/confirm";
 import { notify } from "@/lib/notify";
@@ -56,11 +58,13 @@ import {
   updateMessagingAction,
   updateSubscriptionAction,
   validateTwilioServiceAction,
+  setGymLogoPresetAction,
 } from "../../actions";
 import { CopyButton, CredentialsReveal, type RevealData } from "../credentials-reveal";
 
 type GymInfo = {
   id: string;
+  logoFileId: string | null;
   name: string;
   slug: string;
   city: string | null;
@@ -142,7 +146,7 @@ export function GymDetail(props: {
         crumbs={[{ label: "Console", href: "/admin" }, { label: "Gyms", href: "/admin/gyms" }, { label: gym.name }]}
         title={
           <span className="flex items-center gap-3">
-            <BrandMark name={gym.name} color={gym.brandColor} size={40} />
+            <BrandMark name={gym.name} color={gym.brandColor} logoUrl={mediaUrl(gym.logoFileId, { width: 96, height: 96 })} seed={gym.id} size={40} />
             <span className="min-w-0">
               <span className="block truncate">{gym.name}</span>
             </span>
@@ -811,6 +815,21 @@ function WebsiteTab({
 
   return (
     <div className="grid gap-4 lg:grid-cols-2">
+      <div className="surface p-5 lg:col-span-2">
+        <SectionTitle>Logo</SectionTitle>
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+          <BrandMark name={gym.name} color={gym.brandColor} logoUrl={mediaUrl(gym.logoFileId, { width: 128, height: 128 })} seed={gym.id} size={64} />
+          <div className="min-w-0 flex-1">
+            <LogoPicker
+              value={gym.logoFileId}
+              color={gym.brandColor}
+              disabled={pending}
+              onChange={(preset) => run(() => setGymLogoPresetAction(gym.id, preset))}
+            />
+            <p className="mt-1.5 text-xs text-muted-foreground">The owner can upload their own logo from Settings; picking an icon here replaces it.</p>
+          </div>
+        </div>
+      </div>
       <div className="surface p-5">
         <SectionTitle action={<RuleBadge status={subdomainRule?.status} />}>Built-in website address</SectionTitle>
         <div className="flex items-center gap-2 rounded-xl border bg-muted/30 p-3">

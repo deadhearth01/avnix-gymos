@@ -8,9 +8,9 @@ import { RealtimeProvider } from "@/components/realtime/realtime-provider";
 import { getGymContext } from "@/lib/auth/session";
 import { adminClient } from "@/lib/appwrite/server";
 import { DB_ID, T } from "@/lib/appwrite/schema";
-import { repo } from "@/lib/data/repo";
-import { mediaUrl } from "@/lib/media";
+import { gymLogoUrl } from "@/lib/media";
 import { brandThemeCss } from "@/lib/brand-theme";
+import { sidebarCounts } from "@/lib/queries/gym";
 import { Preloader } from "@/components/brand/preloader";
 import { OnboardingTour } from "@/components/shell/onboarding-tour";
 import type { Gym } from "@/lib/types";
@@ -20,13 +20,9 @@ export default async function GymLayout({ children }: { children: React.ReactNod
   const ctx = await getGymContext();
   // Owners created with "owner onboarding" finish the guided setup before using the workspace.
   if ((ctx.user.prefs as { onboardingGymId?: string })?.onboardingGymId === ctx.gymId && ctx.role === "owner" && !ctx.impersonating) redirect("/onboarding");
-  const r = repo(ctx.gymId);
-  const now = new Date().toISOString();
-  const [collapsed, members, leads, outbox, gyms] = await Promise.all([
+  const [collapsed, { members, leads, outbox }, gyms] = await Promise.all([
     cookies().then((c) => c.get("gymos_sidebar")?.value === "1"),
-    r.count(T.members, [Query.equal("status", "active"), Query.greaterThanEqual("expiresAt", now)]),
-    r.count(T.leads, [Query.equal("status", ["new", "contacted", "trial_booked", "trial_done"])]),
-    r.count(T.messages, [Query.equal("status", "queued")]),
+    sidebarCounts(ctx.gymId),
     ctx.memberships.length > 1
       ? adminClient()
           .tables.listRows<Gym>({
@@ -54,7 +50,7 @@ export default async function GymLayout({ children }: { children: React.ReactNod
       brand={{
         name: ctx.gym.name,
         subtitle: ctx.impersonating ? "Super-admin view" : (ctx.gym.city ?? "Your gym"),
-        logoUrl: mediaUrl(ctx.gym.logoFileId, { width: 96, height: 96 }),
+        logoUrl: gymLogoUrl(ctx.gym, 96),
         color: ctx.gym.brandColor,
       }}
       counts={{ members, leads, outbox }}
@@ -69,7 +65,7 @@ export default async function GymLayout({ children }: { children: React.ReactNod
       {/* gym brand colour → whole workspace (validated hex only) */}
       <style dangerouslySetInnerHTML={{ __html: brandThemeCss(ctx.gym.brandColor) }} />
       <Preloader />
-      <OnboardingTour seen={toursSeen} enabled={!ctx.impersonating} markSeen={markTourSeenAction} />
+      <OnboardingTour seen={toursSeen} enabled={!ctx.impersonating} firstName={(ctx.user.name || "there").split(" ")[0]} markSeen={markTourSeenAction} />
       <RealtimeProvider getToken={realtimeTokenAction}>
         {mustChange && (
           <div className="mb-5 flex flex-col gap-3 rounded-2xl border border-primary/25 bg-primary/8 p-4 sm:flex-row sm:items-center print:hidden">

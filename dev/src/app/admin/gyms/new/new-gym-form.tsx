@@ -18,6 +18,8 @@ import { slugify } from "@/lib/domain/slug";
 import { checkSlugAction, createGymAction, suggestSlugAction, type CreateGymPayload } from "../../actions";
 import { CredentialsReveal, type RevealData } from "../credentials-reveal";
 import type { Pricing, PricingPlan } from "@/lib/services/pricing";
+import { LogoPicker } from "@/components/brand/logo-picker";
+import { defaultLogoFor, presetUrl } from "@/lib/site/presets";
 
 /** The form column is narrow next to the summary rail, so sections stack until very wide screens. */
 const SECTION = "lg:grid-cols-1 lg:gap-5 2xl:grid-cols-[220px_minmax(0,1fr)] 2xl:gap-10";
@@ -57,6 +59,8 @@ export function NewGymForm({ pricing }: { pricing: Pricing }) {
     emailOwner: true,
   });
   const [slugTouched, setSlugTouched] = React.useState(false);
+  // until the admin picks one, the icon follows the name (a different, stable "random" icon per gym)
+  const [pickedLogo, setPickedLogo] = React.useState<string | null>(null);
   const [slugResult, setSlugResult] = React.useState<{ slug: string; available: boolean; error?: string } | null>(null);
   const [errors, setErrors] = React.useState<Errors>({});
   const [pending, start] = React.useTransition();
@@ -80,6 +84,7 @@ export function NewGymForm({ pricing }: { pricing: Pricing }) {
 
   // slug follows the name until the user edits it
   const slug = slugTouched ? f.slug : slugify(f.name);
+  const logo = pickedLogo ?? defaultLogoFor(slug || "new-gym");
   const slugState = !slug
     ? { checking: false as const, available: undefined, error: undefined }
     : slugResult?.slug === slug
@@ -133,6 +138,7 @@ export function NewGymForm({ pricing }: { pricing: Pricing }) {
       twilio: { smsServiceSid: f.smsServiceSid, whatsappFrom: f.whatsappFrom, whatsappServiceSid: f.whatsappServiceSid },
       emailOwner: f.emailOwner,
       pricingPlanId: f.pricingPlanId,
+      logoPreset: logo,
       customPricing: f.customPricing,
     };
     start(async () => {
@@ -275,6 +281,11 @@ export function NewGymForm({ pricing }: { pricing: Pricing }) {
                 <AnimatedIcon icon={Sparkles} className="size-3.5" /> Suggest an available address
               </button>
             )}
+            <div className="sm:col-span-2">
+              <p className="mb-2 text-sm font-medium">Logo</p>
+              <LogoPicker value={logo} onChange={setPickedLogo} />
+              <p className="mt-1.5 text-xs text-muted-foreground">Shown until the gym uploads its own logo in Settings.</p>
+            </div>
             <Field label="City" error={err("city")}>
               <Input value={f.city} onChange={(e) => set("city", e.target.value)} placeholder="Visakhapatnam" />
             </Field>
@@ -482,7 +493,7 @@ export function NewGymForm({ pricing }: { pricing: Pricing }) {
           <div className="surface overflow-hidden">
             <div className="border-b bg-[radial-gradient(120%_120%_at_0%_0%,color-mix(in_oklab,var(--primary)_14%,transparent),transparent_60%)] p-5">
               <div className="flex items-center gap-3">
-                <BrandMark name={f.name || "G"} size={44} />
+                <BrandMark name={f.name || "G"} logoUrl={presetUrl(logo)} size={44} />
                 <div className="min-w-0">
                   <p className="truncate font-semibold">{f.name || "New gym"}</p>
                   <p className="flex items-center gap-1 truncate text-xs text-muted-foreground">

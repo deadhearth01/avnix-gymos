@@ -4,6 +4,7 @@ import { adminClient } from "@/lib/appwrite/server";
 import { DB_ID, T } from "@/lib/appwrite/schema";
 import { rowPermissions } from "@/lib/data/repo";
 import { clientIp } from "@/lib/auth/session";
+import { invalidateGym } from "@/lib/data/cache";
 
 type AuditInput = {
   gymId?: string | null;
@@ -16,6 +17,7 @@ type AuditInput = {
 
 /** Append-only audit trail. Never throws — auditing must not break the action. */
 export async function audit(a: AuditInput) {
+  invalidateGym(a.gymId);
   try {
     const { tables } = adminClient();
     await tables.createRow({

@@ -13,7 +13,7 @@ import { BUCKETS, DB_ID, T } from "@/lib/appwrite/schema";
 import { SESSION_COOKIE } from "@/lib/auth/cookies";
 import { rateLimit } from "@/lib/data/rate-limit";
 import type { GymSite } from "@/lib/types";
-import { isPreset } from "@/lib/site/presets";
+import { isLogoPreset, isPreset } from "@/lib/site/presets";
 
 const settingsSchema = z.object({
   name: z.string().trim().min(2).max(128),
@@ -87,10 +87,24 @@ export async function uploadLogoAction(form: FormData) {
     const ctx = await requireCap("settings.manage");
     const id = await uploadImage(form.get("file") as File, ctx.gymId);
     const { tables, storage } = adminClient();
-    if (ctx.gym.logoFileId) await storage.deleteFile({ bucketId: BUCKETS.gymMedia, fileId: ctx.gym.logoFileId }).catch(() => {});
+    if (ctx.gym.logoFileId && !isPreset(ctx.gym.logoFileId))
+      await storage.deleteFile({ bucketId: BUCKETS.gymMedia, fileId: ctx.gym.logoFileId }).catch(() => {});
     await tables.updateRow({ databaseId: DB_ID, tableId: T.gyms, rowId: ctx.gymId, data: { logoFileId: id } });
     revalidatePath("/", "layout");
     return { fileId: id };
+  }, "Logo updated");
+}
+
+/** Use one of the illustrated default logos (removes an uploaded logo). */
+export async function setLogoPresetAction(preset: string) {
+  return safe(async () => {
+    const ctx = await requireCap("settings.manage");
+    if (!isLogoPreset(preset)) throw new UserError("Pick one of the icons.");
+    const { tables, storage } = adminClient();
+    if (ctx.gym.logoFileId && !isPreset(ctx.gym.logoFileId))
+      await storage.deleteFile({ bucketId: BUCKETS.gymMedia, fileId: ctx.gym.logoFileId }).catch(() => {});
+    await tables.updateRow({ databaseId: DB_ID, tableId: T.gyms, rowId: ctx.gymId, data: { logoFileId: preset } });
+    revalidatePath("/", "layout");
   }, "Logo updated");
 }
 

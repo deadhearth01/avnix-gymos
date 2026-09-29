@@ -10,6 +10,7 @@ import { PLAYBOOKS } from "@/lib/domain/playbooks";
 import { rowPermissions } from "@/lib/data/repo";
 import { credentialsEmail, isEmailReady, sendEmail } from "@/lib/messaging/email";
 import type { Gym, PlatformInvoice, PlatformSubscription } from "@/lib/types";
+import { isLogoPreset, randomLogo } from "@/lib/site/presets";
 
 const r2 = (n: number) => Math.round(n * 100) / 100;
 
@@ -66,6 +67,8 @@ export type CreateGymInput = {
   emailOwner: boolean;
   /** Owner finishes setup themselves (guided wizard on first sign-in); the website stays offline until then. */
   onboarding?: boolean;
+  /** Illustrated default logo ("preset:logo-…"); a random one is picked when omitted. */
+  logoPreset?: string;
 };
 
 export type CreateGymResult = {
@@ -198,6 +201,7 @@ export async function createGym(input: CreateGymInput, actor: { $id: string; nam
         twilioWhatsappServiceSid: input.twilio.whatsappServiceSid?.trim() || null,
         messagingEnabled: Boolean(input.twilio.smsServiceSid || input.twilio.whatsappFrom || input.twilio.whatsappServiceSid),
         siteEnabled: !input.onboarding,
+        logoFileId: input.logoPreset && isLogoPreset(input.logoPreset) ? input.logoPreset : randomLogo(),
         site: JSON.stringify({
           tagline: "Train hard. Train right.",
           heroText: `Coaching, serious equipment and people who notice when you don’t show up${input.city ? ` — right here in ${input.city.trim()}` : ""}.`,

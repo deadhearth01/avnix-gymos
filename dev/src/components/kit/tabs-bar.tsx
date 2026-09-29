@@ -21,7 +21,7 @@ export function TabsBar<T extends string>({
   layoutId?: string;
 }) {
   return (
-    <div role="tablist" className={cn("-mx-1 no-scrollbar flex gap-1 overflow-x-auto border-b px-1", className)}>
+    <div role="tablist" data-tour="tabs" className={cn("-mx-1 no-scrollbar flex gap-1 overflow-x-auto border-b px-1", className)}>
       {tabs.map((t) => {
         const active = t.value === value;
         return (

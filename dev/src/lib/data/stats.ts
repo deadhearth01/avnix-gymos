@@ -3,6 +3,7 @@ import { adminClient, isAppwriteError } from "@/lib/appwrite/server";
 import { DB_ID, T } from "@/lib/appwrite/schema";
 import { rowPermissions } from "@/lib/data/repo";
 import { dayKey } from "@/lib/domain/membership";
+import { invalidateGym } from "@/lib/data/cache";
 
 type Metric = "checkins" | "revenue" | "payments" | "newMembers" | "sales" | "leads";
 
@@ -11,6 +12,7 @@ type Metric = "checkins" | "revenue" | "payments" | "newMembers" | "sales" | "le
  * rows instead of scanning every check-in / payment.
  */
 export async function bumpStat(gymId: string, metrics: Partial<Record<Metric, number>>, at = new Date()) {
+  invalidateGym(gymId);
   const { tables } = adminClient();
   const day = dayKey(at);
   const rowId = `${gymId}_${day.replace(/-/g, "")}`;

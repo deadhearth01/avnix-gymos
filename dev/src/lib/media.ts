@@ -1,4 +1,4 @@
-import { presetUrl } from "@/lib/site/presets";
+import { defaultLogoFor, presetUrl } from "@/lib/site/presets";
 
 const ENDPOINT = process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT || "";
 const PROJECT = process.env.NEXT_PUBLIC_APPWRITE_PROJECT_ID || "";
@@ -14,4 +14,9 @@ export function mediaUrl(fileId: string | null | undefined, opts: { width?: numb
   if (opts.width) q.set("width", String(opts.width));
   if (opts.height) q.set("height", String(opts.height));
   return `${base}/preview?${q}`;
+}
+
+/** A gym's logo: the uploaded one, the illustrated icon it picked, or a stable default icon. */
+export function gymLogoUrl(gym: { $id: string; logoFileId: string | null }, size = 128) {
+  return mediaUrl(gym.logoFileId, { width: size, height: size }) ?? presetUrl(defaultLogoFor(gym.$id));
 }

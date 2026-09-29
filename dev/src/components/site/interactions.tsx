@@ -5,6 +5,7 @@ import Image from "next/image";
 import { motion, useReducedMotion } from "motion/react";
 import { ArrowLeft, ArrowRight, Check, Menu, X } from "@/components/icons";
 import { BrandIcon } from "@/components/brand/social-icons";
+import { isDefaultLogoUrl } from "@/lib/site/presets";
 import { Field } from "@/components/forms/field";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -344,8 +345,11 @@ export function SiteHeader({
           onNavigate={() => setMenu(false)}
         >
           {logo ? (
-            <span className="relative size-9 shrink-0 overflow-hidden rounded-[10px] bg-white">
-              <Image src={logo} alt="" fill unoptimized sizes="36px" className="object-cover" />
+            <span
+              className="relative size-9 shrink-0 overflow-hidden rounded-[10px] bg-white"
+              style={isDefaultLogoUrl(logo) ? { background: "color-mix(in oklab, var(--brand) 22%, white)" } : undefined}
+            >
+              <Image src={logo} alt="" fill unoptimized sizes="36px" className={isDefaultLogoUrl(logo) ? "object-contain p-0.5" : "object-cover"} />
             </span>
           ) : (
             <span className="grid size-9 shrink-0 place-items-center rounded-[10px] bg-brand text-sm font-extrabold text-brand-ink">

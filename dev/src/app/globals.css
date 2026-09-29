@@ -841,3 +841,46 @@
 .gymos-tour .driver-popover-arrow-side-bottom.driver-popover-arrow {
   border-bottom-color: var(--card);
 }
+
+/* global toast: "time left" bar */
+@keyframes app-toast-timer {
+  from {
+    transform: scaleX(1);
+  }
+  to {
+    transform: scaleX(0);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  [style*="app-toast-timer"] {
+    animation: none !important;
+  }
+}
+.gymos-tour .driver-popover-footer {
+  gap: 6px;
+}
+.gymos-tour .gymos-tour-skip {
+  margin-right: auto;
+  border: 0 !important;
+  background: transparent !important;
+  padding: 8px 4px !important;
+  color: var(--muted-foreground) !important;
+  font:
+    500 13px/1 var(--font-inter),
+    ui-sans-serif,
+    system-ui,
+    sans-serif;
+  cursor: pointer;
+}
+.gymos-tour .gymos-tour-skip:hover {
+  color: var(--foreground) !important;
+  text-decoration: underline;
+}
+.gymos-tour .driver-popover-progress-text {
+  flex-basis: 100%;
+  order: -1;
+  margin-bottom: 6px;
+}
+.gymos-tour .driver-popover-footer {
+  flex-wrap: wrap;
+}

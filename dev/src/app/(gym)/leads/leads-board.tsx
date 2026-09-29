@@ -162,7 +162,7 @@ export function LeadsBoard({
             />
           </label>
           {canEdit && (
-            <Button onClick={() => setAdding(true)}>
+            <Button data-tour="add-lead" onClick={() => setAdding(true)}>
               <AnimatedIcon icon={Plus} /> Add lead
             </Button>
           )}
@@ -185,7 +185,10 @@ export function LeadsBoard({
           />
         </div>
       ) : (
-        <div className="-mx-4 flex snap-x snap-mandatory scrollbar-thin gap-3 overflow-x-auto px-4 pb-4 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8">
+        <div
+          data-tour="lead-board"
+          className="-mx-4 flex snap-x snap-mandatory scrollbar-thin gap-3 overflow-x-auto px-4 pb-4 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8"
+        >
           {COLUMNS.map((col) => {
             const items = filtered.filter((l) => l.status === col.status);
             return (

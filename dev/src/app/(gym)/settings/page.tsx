@@ -1,5 +1,5 @@
 import { requireCap } from "@/lib/auth/session";
-import { mediaUrl } from "@/lib/media";
+import { gymLogoUrl } from "@/lib/media";
 import { SettingsView } from "./settings-view";
 
 export const metadata = { title: "Settings" };
@@ -20,7 +20,7 @@ export default async function SettingsPage({ searchParams }: PageProps<"/setting
         gstRate: ctx.gym.gstRate ?? 5,
         gstInclusive: ctx.gym.gstInclusive,
         brandColor: ctx.gym.brandColor ?? "#16a34a",
-        logoUrl: mediaUrl(ctx.gym.logoFileId, { width: 128, height: 128 }),
+        logoUrl: gymLogoUrl(ctx.gym, 128),
       }}
     />
   );

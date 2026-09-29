@@ -19,9 +19,11 @@ import {
   ArrowUp as PhArrowUp,
   ArrowUpRight as PhArrowUpRight,
   ArrowsClockwise as PhArrowsClockwise,
+  ArrowsIn as PhArrowsIn,
   Bank as PhBank,
   Barbell as PhBarbell,
   Bicycle as PhBicycle,
+  BookOpenText as PhBookOpenText,
   BowlFood as PhBowlFood,
   Buildings as PhBuildings,
   Cake as PhCake,
@@ -55,15 +57,18 @@ import {
   EnvelopeSimple as PhEnvelopeSimple,
   Eye as PhEye,
   EyeSlash as PhEyeSlash,
+  FastForward as PhFastForward,
   FileText as PhFileText,
   Fingerprint as PhFingerprint,
   Fire as PhFire,
   FlowArrow as PhFlowArrow,
   Footprints as PhFootprints,
+  Funnel as PhFunnel,
   Gear as PhGear,
   GearSix as PhGearSix,
   GenderFemale as PhGenderFemale,
   Globe as PhGlobe,
+  HandTap as PhHandTap,
   HardDrives as PhHardDrives,
   Heartbeat as PhHeartbeat,
   House as PhHouse,
@@ -73,6 +78,7 @@ import {
   Key as PhKey,
   Keyboard as PhKeyboard,
   Lifebuoy as PhLifebuoy,
+  Lightbulb as PhLightbulb,
   Lightning as PhLightning,
   Link as PhLink,
   List as PhList,
@@ -120,6 +126,8 @@ import {
   Stack as PhStack,
   Star as PhStar,
   Sun as PhSun,
+  SunDim as PhSunDim,
+  Sunglasses as PhSunglasses,
   Sword as PhSword,
   Target as PhTarget,
   Ticket as PhTicket,
@@ -311,6 +319,18 @@ export const Plug = icon(PhPlugsConnected, "Plug", "duotone");
 export const CircleDot = icon(PhCircle, "CircleDot", "fill");
 export const Camera = icon(PhCamera, "Camera", "duotone");
 export const Maximize = icon(PhCornersOut, "Maximize", "regular");
+export const Info = icon(PhInfo, "Info", "duotone");
+export const HandTap = icon(PhHandTap, "HandTap", "duotone");
+export const BookOpen = icon(PhBookOpenText, "BookOpen", "duotone");
+export const Lightbulb = icon(PhLightbulb, "Lightbulb", "duotone");
+export const Funnel = icon(PhFunnel, "Funnel", "regular");
+export const ChartBar = icon(PhChartBar, "ChartBar", "duotone");
+export const Question = icon(PhQuestion, "Question", "duotone");
+export const SkipAhead = icon(PhFastForward, "SkipAhead", "regular");
+export const SunDim = icon(PhSunDim, "SunDim", "duotone");
+export const Sunglasses = icon(PhSunglasses, "Sunglasses", "duotone");
+export const Users = icon(PhUsers, "Users", "duotone");
+export const ArrowsIn = icon(PhArrowsIn, "ArrowsIn", "regular");
 
 /** The real WhatsApp mark (Simple Icons) — used wherever the action opens WhatsApp. */
 export const WhatsApp: IconComponent = Object.assign(

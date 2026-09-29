@@ -15,7 +15,7 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
         <FeedbackProvider>
           <TooltipProvider delayDuration={250} skipDelayDuration={120}>
             <ConfirmProvider>{children}</ConfirmProvider>
-            <Toaster position="bottom-right" richColors={false} closeButton />
+            <Toaster position="bottom-right" gap={10} visibleToasts={4} offset={20} mobileOffset={12} />
           </TooltipProvider>
         </FeedbackProvider>
       </MotionConfig>

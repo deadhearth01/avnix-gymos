@@ -4,7 +4,8 @@ import * as React from "react";
 import Link from "next/link";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { ArrowLeft, CircleX, Maximize, ScanFace, TriangleAlert, Webcam } from "@/components/icons";
-import { averageEmbedding, checkFace, loadFaceEngine, useCamera } from "@/components/face/face-engine";
+import { averageEmbedding, checkFrame, loadFaceEngine, useCamera, type FaceIssue } from "@/components/face/face-engine";
+import { FaceIssueCard } from "@/components/face/face-guide";
 import { emitFeedback } from "@/components/feedback/feedback-provider";
 import { fmtDate } from "@/lib/format";
 import type { ActionResult } from "@/lib/types";
@@ -36,6 +37,8 @@ export function KioskView({ gymName, identify }: { gymName: string; identify: Id
   const { videoRef, error, devices, stream } = useCamera(deviceId);
   const [engineState, setEngineState] = React.useState<"loading" | "ready" | "failed">("loading");
   const [hint, setHint] = React.useState("Starting camera…");
+  // shown only once the same problem persists (~0.5 s), so tips don't flicker
+  const [issue, setIssue] = React.useState<FaceIssue>("none");
   const [progress, setProgress] = React.useState(0);
   const [shown, setShown] = React.useState<Shown | null>(null);
   const busy = React.useRef(false);
@@ -56,13 +59,18 @@ export function KioskView({ gymName, identify }: { gymName: string; identify: Id
     if (engineState !== "ready" || !stream) return;
     let stop = false;
     let stable: number[][] = [];
+    let lastIssue: FaceIssue = "none";
+    let streak = 0;
     const tick = async () => {
       if (stop) return;
       const video = videoRef.current;
       if (video && video.readyState >= 2 && !busy.current && Date.now() > pauseUntil.current) {
         const human = await loadFaceEngine();
         const res = await human.detect(video);
-        const check = checkFace(res.face[0], video.videoWidth || 1280);
+        const check = checkFrame(res.face, video);
+        streak = check.issue === lastIssue ? streak + 1 : 0;
+        lastIssue = check.issue;
+        setIssue(check.ok ? "none" : streak >= 4 ? check.issue : (cur) => (cur === check.issue ? cur : "none"));
         if (check.ok && check.face?.embedding) {
           stable.push(check.face.embedding);
           setProgress(Math.min(1, stable.length / STABLE_FRAMES));
@@ -190,6 +198,39 @@ export function KioskView({ gymName, identify }: { gymName: string; identify: Id
           {status}
         </p>
         <p className="mt-3 text-xs text-white/45">Only a face signature is compared — no photos are stored.</p>
+      </div>
+
+      {/* live tip for what the camera sees (mask, too far, backlight…) */}
+      <div className="absolute inset-x-4 bottom-32 z-10 mx-auto max-w-sm">
+        <AnimatePresence>
+          {!shown && issue !== "none" && issue !== "still" && (
+            <motion.div key={issue} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+              <FaceIssueCard issue={issue} dark />
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+
+      {/* how-to strip while nobody is in front of the camera */}
+      <div
+        className={`absolute top-24 right-4 z-10 hidden w-56 rounded-2xl bg-black/45 p-3 backdrop-blur-md transition-opacity duration-500 lg:block ${issue === "none" && hint === "Look at the camera" && !shown ? "opacity-100" : "pointer-events-none opacity-0"}`}
+      >
+        <p className="mb-2 text-sm font-semibold">How to check in</p>
+        <ul className="grid gap-2 text-xs text-white/85">
+          {[
+            ["face-center", "Stand in front, face inside the oval"],
+            ["face-light", "Face the light"],
+            ["no-mask", "Lower your mask for a moment"],
+          ].map(([img, text], i) => (
+            <li key={img} className="flex items-center gap-2.5">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={`/brand/face-guide/${img}.webp`} alt="" className="size-12 shrink-0 rounded-lg bg-white object-cover" />
+              <span>
+                {i + 1}. {text}
+              </span>
+            </li>
+          ))}
+        </ul>
       </div>
 
       <AnimatePresence>

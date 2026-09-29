@@ -18,6 +18,7 @@ export type GymRow = {
   slug: string;
   city: string | null;
   brandColor: string | null;
+  logoUrl: string | null;
   status: "active" | "suspended" | "archived";
   ownerName: string | null;
   ownerEmail: string | null;
@@ -67,7 +68,7 @@ export function GymsTable({ gyms }: { gyms: GymRow[] }) {
       sort: (r) => r.name.toLowerCase(),
       cell: (r) => (
         <div className="flex items-center gap-3">
-          <BrandMark name={r.name} color={r.brandColor} size={34} />
+          <BrandMark name={r.name} color={r.brandColor} logoUrl={r.logoUrl} seed={r.id} size={34} />
           <div className="min-w-0">
             <p className="truncate font-medium">{r.name}</p>
             <p className="truncate text-xs text-muted-foreground">{r.city ?? "—"}</p>
@@ -177,7 +178,7 @@ export function GymsTable({ gyms }: { gyms: GymRow[] }) {
       rowHref={(r) => `/admin/gyms/${r.id}`}
       mobileCard={(r) => (
         <div className="flex items-center gap-3">
-          <BrandMark name={r.name} color={r.brandColor} size={36} />
+          <BrandMark name={r.name} color={r.brandColor} logoUrl={r.logoUrl} seed={r.id} size={36} />
           <div className="min-w-0 flex-1">
             <p className="truncate font-medium">{r.name}</p>
             <p className="truncate text-xs text-muted-foreground">

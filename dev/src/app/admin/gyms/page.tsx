@@ -1,3 +1,4 @@
+import { mediaUrl } from "@/lib/media";
 import Link from "next/link";
 import { Plus } from "@/components/icons";
 import { PageHeader } from "@/components/kit/page-header";
@@ -31,6 +32,7 @@ export default async function GymsPage() {
           slug: g.slug,
           city: g.city,
           brandColor: g.brandColor,
+          logoUrl: mediaUrl(g.logoFileId, { width: 96, height: 96 }),
           status: g.status,
           ownerName: g.ownerName,
           ownerEmail: g.ownerEmail,

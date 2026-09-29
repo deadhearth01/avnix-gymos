@@ -278,7 +278,7 @@ export function BillingView({
       <div className="surface mt-4 p-5">
         <div className="mb-3 flex items-center justify-between">
           <p className="text-[15px] font-semibold">How members paid this month</p>
-          <Button size="sm" onClick={() => setPicker(true)}>
+          <Button size="sm" data-tour="collect" onClick={() => setPicker(true)}>
             <AnimatedIcon icon={Wallet} /> Collect a payment
           </Button>
         </div>

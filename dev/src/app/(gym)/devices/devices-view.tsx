@@ -3,7 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Check, Copy, Fingerprint, MoreHorizontal, Plug, Plus, ScanFace, Webcam, type IconComponent } from "@/components/icons";
+import { Check, Copy, Fingerprint, MoreHorizontal, Plug, Plus, ScanFace, Webcam, WhatsApp, type IconComponent } from "@/components/icons";
 import { Field } from "@/components/forms/field";
 import { Tag, type Tone } from "@/components/kit/badges";
 import { useConfirm } from "@/components/kit/confirm";
@@ -45,21 +45,21 @@ type PunchRow = {
 
 const VENDORS: Record<Exclude<Vendor, "kiosk">, { title: string; brands: string; body: string; icon: IconComponent }> = {
   zkteco: {
-    title: "Fingerprint / face terminal",
+    title: "Fingerprint or face machine",
     brands: "eSSL, ZKTeco, Realtime, BioMax, Identix",
-    body: "Uses the device’s built-in “Cloud server” (ADMS) setting. Punches arrive in seconds.",
+    body: "The attendance machines most gyms in India have. Connects over the gym’s internet — no computer needed.",
     icon: Fingerprint,
   },
   hikvision: {
-    title: "Face recognition terminal",
-    brands: "Hikvision, Hikvision-OEM (Prama, CP Plus)",
-    body: "Uses HTTP listening on the terminal. Face, fingerprint and card events.",
+    title: "Face recognition machine",
+    brands: "Hikvision, Prama, CP Plus",
+    body: "Wall-mounted face machines. Also works with their fingerprint and card readers.",
     icon: ScanFace,
   },
   generic: {
-    title: "Any other device",
-    brands: "Matrix, Suprema, USB scanners via a bridge, scripts",
-    body: "Sends punches to a secure webhook with a device key.",
+    title: "Another brand",
+    brands: "Matrix, Suprema and others",
+    body: "We give you a link and a password for the machine. Your installer or AvniX support sets it up.",
     icon: Plug,
   },
 };
@@ -126,9 +126,9 @@ export function DevicesView({ devices, punches, facesEnrolled, root }: { devices
   }
   async function rotate(d: DeviceRow) {
     const ok = await confirm({
-      title: `Create a new key for ${d.name}?`,
-      description: "The old key stops working immediately. You’ll need to update it on the device.",
-      confirmLabel: "Create new key",
+      title: `Create a new connection password for ${d.name}?`,
+      description: "The old one stops working straight away, so the machine must be updated with the new one.",
+      confirmLabel: "Create new password",
     });
     if (!ok) return;
     const r = await rotateDeviceTokenAction(d.id);
@@ -216,7 +216,7 @@ export function DevicesView({ devices, punches, facesEnrolled, root }: { devices
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
                     <DropdownMenuItem onSelect={() => void toggle(d)}>{d.enabled ? "Pause device" : "Resume device"}</DropdownMenuItem>
-                    {d.vendor !== "zkteco" && <DropdownMenuItem onSelect={() => void rotate(d)}>Create a new device key</DropdownMenuItem>}
+                    {d.vendor !== "zkteco" && <DropdownMenuItem onSelect={() => void rotate(d)}>New connection password</DropdownMenuItem>}
                     {d.vendor === "zkteco" && (
                       <DropdownMenuItem onSelect={() => setSecret({ vendor: d.vendor, name: d.name, token: null, serial: d.serial ?? undefined })}>
                         Setup steps
@@ -241,11 +241,11 @@ export function DevicesView({ devices, punches, facesEnrolled, root }: { devices
               </div>
               <dl className="mt-4 grid grid-cols-2 gap-3 border-t pt-4 text-sm">
                 <div>
-                  <dt className="text-xs text-muted-foreground">Last punch</dt>
+                  <dt className="text-xs text-muted-foreground">Last check-in</dt>
                   <dd className="mt-0.5">{ago(d.lastPunchAt, now)}</dd>
                 </div>
                 <div>
-                  <dt className="text-xs text-muted-foreground">{d.serial ? "Serial number" : "Punches"}</dt>
+                  <dt className="text-xs text-muted-foreground">{d.serial ? "Serial number" : "Check-ins"}</dt>
                   <dd className="mt-0.5 truncate font-mono text-[13px]">{d.serial ?? d.punchCount}</dd>
                 </div>
               </dl>
@@ -269,12 +269,12 @@ export function DevicesView({ devices, punches, facesEnrolled, root }: { devices
       </div>
 
       <div className="surface p-5">
-        <SectionTitle action={<span className="text-[13px] text-muted-foreground">Live</span>}>Recent punches</SectionTitle>
+        <SectionTitle action={<span className="text-[13px] text-muted-foreground">Live</span>}>Recent machine check-ins</SectionTitle>
         {punches.length === 0 ? (
           <EmptyState
             compact
             icon={Fingerprint}
-            title="No punches yet"
+            title="No machine check-ins yet"
             description="When a member scans a finger or face on a connected device, it shows up here instantly."
           />
         ) : (
@@ -402,7 +402,12 @@ function AddDevice({
             <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Entrance machine" maxLength={128} />
           </Field>
           {vendor === "zkteco" && (
-            <Field label="Serial number" required hint="On the device: Menu → System info → Device info → Serial number." error={errors.serial}>
+            <Field
+              label="Serial number"
+              required
+              hint="Printed on a sticker on the back or bottom of the machine. Also on the machine: Menu → System info → Device info."
+              error={errors.serial}
+            >
               <Input
                 value={serial}
                 onChange={(e) => setSerial(e.target.value.toUpperCase())}
@@ -461,69 +466,85 @@ function SetupSteps({
   onClose: () => void;
 }) {
   const hikUrl = data?.token ? `https://${root}/api/devices/hik/${data.token}` : "";
+  const installerText = !data
+    ? ""
+    : data.vendor === "zkteco"
+      ? `GymOS attendance setup for ${data.name} (serial ${data.serial ?? ""}):\nCloud server address: ${root}\nPort: 443 (turn on "domain name" and HTTPS if available)\nUser ID on the machine = member number (M0140 → 140).`
+      : data.vendor === "hikvision"
+        ? `GymOS attendance setup for ${data.name}:\nHTTP listening / event notification URL: ${hikUrl}\nProtocol HTTPS, port 443, event: AccessControllerEvent.\nEmployee No. on the machine = member number (M0140 → 140).`
+        : `GymOS attendance setup for ${data.name}:\nPOST https://${root}/api/devices/punch\nHeader: Authorization: Bearer ${data.token}\nBody: {"userId":"140","method":"fingerprint"} (userId = member number).`;
   return (
     <Dialog open={!!data} onOpenChange={(v) => !v && onClose()}>
       <DialogContent className="max-h-[92dvh] overflow-y-auto sm:max-w-xl">
         <DialogHeader>
           <DialogTitle>Connect {data?.name}</DialogTitle>
           <DialogDescription>
-            {data?.token ? "The device key is shown only once. Copy it now." : "Do this once on the machine. It keeps working after restarts."}
+            {data?.token
+              ? "This connection password is shown only once — copy it or send it to your installer now."
+              : "Do this once on the machine. It keeps working after restarts and power cuts."}
           </DialogDescription>
         </DialogHeader>
         {data?.vendor === "zkteco" && (
           <ol className="grid gap-4 text-sm">
-            <Step n={1} title="Open the cloud server setting">
-              On the device: <b>Menu → Comm. → Cloud Server Setting</b> (on some eSSL models: <b>Comm → ADMS</b>).
+            <Step n={1} title="Open the cloud setting on the machine">
+              Press <b>M/OK</b> → <b>Comm.</b> (Communication) → <b>Cloud Server Setting</b>. On some eSSL machines it’s called <b>ADMS</b>.
             </Step>
-            <Step n={2} title="Enter the GymOS server">
+            <Step n={2} title="Type in GymOS">
               <div className="mt-2 grid gap-2">
-                <CopyRow label="Server address (turn on “Enable domain name”)" value={root} />
-                <CopyRow label="Server port" value="443" />
+                <CopyRow label="Server address" value={root} />
+                <CopyRow label="Port" value="443" />
               </div>
               <p className="mt-2 text-xs text-muted-foreground">
-                Turn on HTTPS if the menu has it. Older models without HTTPS: use port 80 and ask AvniX support to enable plain-HTTP for your device.
+                If you see switches called “Domain name” or “HTTPS”, turn them on. Then save and restart the machine.
               </p>
             </Step>
-            <Step n={3} title="Enrol members with their member number">
-              Add each member on the device with <b>User ID = the number in their member code</b> (M0140 → <b>140</b>), then register their finger or face.
+            <Step n={3} title="Add members with their member number">
+              When you add a person on the machine, use their member number as the ID (<b>M0140</b> → type <b>140</b>). Then register their finger or face.
             </Step>
-            <Step n={4} title="Check it’s connected">
-              Within a minute this device shows <b>Online</b>. Punches appear under Recent punches.
+            <Step n={4} title="Check it’s working">
+              Within a minute this machine shows <b>Online</b> here, and check-ins appear below.
             </Step>
           </ol>
         )}
         {data?.vendor === "hikvision" && data.token && (
           <ol className="grid gap-4 text-sm">
-            <Step n={1} title="Open HTTP listening">
-              In the terminal’s web page: <b>Configuration → Network → Advanced → HTTP Listening</b> (or <b>Event → Alarm server</b>).
+            <Step n={1} title="Open the machine’s settings on a computer">
+              Your installer usually does this: open the machine’s settings page and go to <b>Network → Advanced → HTTP Listening</b>.
             </Step>
-            <Step n={2} title="Paste this address">
+            <Step n={2} title="Paste this link">
               <div className="mt-2">
-                <CopyRow label="Destination URL" value={hikUrl} secret />
+                <CopyRow label="Link (keep it private — it works like a password)" value={hikUrl} secret />
               </div>
-              <p className="mt-2 text-xs text-muted-foreground">
-                Protocol HTTPS, port 443. The long key at the end is the password for this device — keep it private.
-              </p>
             </Step>
-            <Step n={3} title="Use member numbers as Employee No.">
-              Add people with <b>Employee No. = member number</b> (M0140 → <b>140</b>) and capture their face.
+            <Step n={3} title="Use member numbers">
+              Add people on the machine with <b>Employee No. = member number</b> (<b>M0140</b> → <b>140</b>) and capture their face.
             </Step>
           </ol>
         )}
         {data?.vendor === "generic" && data.token && (
           <div className="grid gap-3 text-sm">
-            <CopyRow label="Endpoint" value={`https://${root}/api/devices/punch`} />
-            <CopyRow label="Device key (Authorization: Bearer …)" value={data.token} secret />
-            <CopyRow
-              label="Example"
-              value={`curl -X POST https://${root}/api/devices/punch -H "Authorization: Bearer ${data.token}" -H "Content-Type: application/json" -d '{"userId":"140","method":"fingerprint"}'`}
-            />
-            <p className="text-xs text-muted-foreground">
-              Send the member number (140) or member code (M0140). Batches of up to 500 punches are accepted as {'{ "punches": [ … ] }'}.
-            </p>
+            <p className="text-muted-foreground">Send these details to your installer or to AvniX support — they connect the machine for you.</p>
+            <CopyRow label="Connection password" value={data.token} secret />
           </div>
         )}
-        <div className="flex justify-end">
+        {data && (
+          <details className="rounded-xl border p-3 text-sm">
+            <summary className="cursor-pointer font-medium">Technical details for your installer</summary>
+            <pre className="mt-2 text-xs whitespace-pre-wrap text-muted-foreground">{installerText}</pre>
+          </details>
+        )}
+        <p className="rounded-xl bg-muted/50 p-3 text-xs text-muted-foreground">
+          Still showing “Waiting” after 5 minutes? Some older machines can’t connect securely. Message AvniX support on WhatsApp with the serial number — we’ll
+          sort it out.
+        </p>
+        <div className="flex flex-wrap justify-end gap-2">
+          {data && (
+            <Button variant="outline" asChild>
+              <a href={`https://wa.me/?text=${encodeURIComponent(installerText)}`} target="_blank" rel="noopener noreferrer">
+                <WhatsApp /> Send to installer
+              </a>
+            </Button>
+          )}
           <Button onClick={onClose}>Done</Button>
         </div>
       </DialogContent>

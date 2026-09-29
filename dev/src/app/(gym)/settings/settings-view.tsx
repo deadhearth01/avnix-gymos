@@ -3,7 +3,7 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
-import { Building2, CreditCard, KeyRound, Monitor, Moon, Palette, Settings2, Sun, Upload } from "@/components/icons";
+import { Building2, Check, CreditCard, KeyRound, Monitor, Moon, Settings2, Sun, Upload, X } from "@/components/icons";
 import { PageHeader, SectionTitle } from "@/components/kit/page-header";
 import { TabsBar, useTabParam } from "@/components/kit/tabs-bar";
 import { FadeIn } from "@/components/kit/motion";
@@ -17,7 +17,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useFeedback } from "@/components/feedback/feedback-provider";
 import { notify } from "@/lib/notify";
 import { inr } from "@/lib/format";
-import { updateGymSettingsAction, uploadLogoAction, changePasswordAction } from "../_actions/settings";
+import { updateGymSettingsAction, uploadLogoAction, changePasswordAction, setLogoPresetAction } from "../_actions/settings";
+import { BrandMark } from "@/components/shell/sidebar";
+import { LogoPicker } from "@/components/brand/logo-picker";
+import { logoPresetFromUrl, presetUrl } from "@/lib/site/presets";
 
 type GymForm = {
   name: string;
@@ -40,6 +43,7 @@ export function SettingsView({ initialTab, gym }: { initialTab: string; gym: Gym
   const [f, setF] = React.useState(gym);
   const [saved, setSaved] = React.useState(gym);
   const [logoUrl, setLogoUrl] = React.useState(gym.logoUrl);
+  const [pickingLogo, setPickingLogo] = React.useState(false);
   const [dragging, setDragging] = React.useState(false);
   const [saving, startSave] = React.useTransition();
   const [uploading, startUpload] = React.useTransition();
@@ -128,7 +132,7 @@ export function SettingsView({ initialTab, gym }: { initialTab: string; gym: Gym
                   <Textarea maxLength={500} value={f.address} onChange={(e) => setF({ ...f, address: e.target.value })} />
                 </Field>
               </FormSection>
-              <FormSection title="Brand" description="Use your colour and logo across your gym workspace.">
+              <FormSection className="scroll-mt-24" title="Brand" description="Use your colour and logo across your gym workspace.">
                 <div className="sm:col-span-2">
                   <SectionTitle>Brand colour</SectionTitle>
                   <div className="flex flex-wrap items-center gap-2">
@@ -152,17 +156,10 @@ export function SettingsView({ initialTab, gym }: { initialTab: string; gym: Gym
                     />
                   </div>
                 </div>
-                <div className="sm:col-span-2">
+                <div data-tour="settings-brand" className="sm:col-span-2">
                   <SectionTitle>Logo</SectionTitle>
                   <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
-                    <div
-                      role="img"
-                      aria-label={logoUrl ? "Current gym logo" : "No gym logo"}
-                      className="grid size-20 shrink-0 place-items-center rounded-2xl border bg-muted/40 bg-cover bg-center text-muted-foreground"
-                      style={logoUrl ? { backgroundImage: `url(${logoUrl})` } : undefined}
-                    >
-                      {!logoUrl && <Palette className="size-6" />}
-                    </div>
+                    <BrandMark name={gym.name} logoUrl={logoUrl} color={f.brandColor} size={80} />
                     <label
                       onDragOver={(e) => {
                         e.preventDefault();
@@ -174,7 +171,7 @@ export function SettingsView({ initialTab, gym }: { initialTab: string; gym: Gym
                         setDragging(false);
                         upload(e.dataTransfer.files[0]);
                       }}
-                      className={`flex min-h-24 flex-1 cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed px-4 text-center transition-colors ${dragging ? "border-primary bg-success-soft/40" : "border-border hover:bg-muted/40"}`}
+                      className={`flex min-h-24 flex-1 cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed px-4 text-center transition-colors ${dragging ? "border-primary bg-primary/8" : "border-border hover:bg-muted/40"}`}
                     >
                       <span className="anim-host flex items-center gap-2 text-sm font-medium">
                         <AnimatedIcon icon={Upload} className="size-4" /> {uploading ? "Uploading…" : "Drop a logo here or browse"}
@@ -191,6 +188,53 @@ export function SettingsView({ initialTab, gym }: { initialTab: string; gym: Gym
                         }}
                       />
                     </label>
+                  </div>
+                  <div className="mt-3 grid gap-3 rounded-xl bg-muted/50 p-3 text-xs sm:grid-cols-[1fr_auto]">
+                    <ul className="grid gap-1.5">
+                      <li className="flex gap-2">
+                        <Check className="mt-0.5 size-3.5 shrink-0 text-success" /> Square image (same width and height), at least 256 × 256 px
+                      </li>
+                      <li className="flex gap-2">
+                        <Check className="mt-0.5 size-3.5 shrink-0 text-success" /> PNG or SVG with a transparent background looks best on every colour
+                      </li>
+                      <li className="flex gap-2">
+                        <Check className="mt-0.5 size-3.5 shrink-0 text-success" /> A simple mark or initials — it’s shown as small as a fingernail
+                      </li>
+                      <li className="flex gap-2">
+                        <X className="mt-0.5 size-3.5 shrink-0 text-destructive" /> Long text, slogans or thin lines become unreadable when small
+                      </li>
+                    </ul>
+                    <div className="flex items-end gap-3 sm:border-l sm:pl-3" aria-label="How your logo looks in different places">
+                      {[
+                        [24, "Menu"],
+                        [36, "Website"],
+                        [56, "Invoice"],
+                      ].map(([px, label]) => (
+                        <span key={label} className="grid justify-items-center gap-1 text-muted-foreground">
+                          <BrandMark name={gym.name} logoUrl={logoUrl} color={f.brandColor} size={px as number} />
+                          {label}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="mt-4">
+                    <p className="mb-2 text-sm font-medium">Or use one of our icons</p>
+                    <LogoPicker
+                      value={logoPresetFromUrl(logoUrl)}
+                      color={f.brandColor}
+                      disabled={uploading || pickingLogo}
+                      onChange={(preset) => {
+                        setPickingLogo(true);
+                        setLogoPresetAction(preset)
+                          .then((r) => {
+                            if (!r.ok) return notify.error(r.error);
+                            setLogoUrl(presetUrl(preset));
+                            notify.success("Logo updated");
+                            router.refresh();
+                          })
+                          .finally(() => setPickingLogo(false));
+                      }}
+                    />
                   </div>
                 </div>
               </FormSection>

@@ -2,6 +2,7 @@ import "server-only";
 import { ID, Permission, Query, Role, type Models } from "node-appwrite";
 import { adminClient, isAppwriteError } from "@/lib/appwrite/server";
 import { DB_ID, TABLES, type TableId } from "@/lib/appwrite/schema";
+import { invalidateGym } from "@/lib/data/cache";
 
 const ACCESS = new Map(TABLES.map((t) => [t.id, t.access]));
 
@@ -89,6 +90,7 @@ export function repo(gymId: string) {
       }
     },
     async create<R extends Models.Row>(table: TableId, data: Data, id: string = ID.unique()) {
+      invalidateGym(gymId);
       return plain(
         await tables.createRow<R>({
           databaseId: DB_ID,
@@ -101,11 +103,13 @@ export function repo(gymId: string) {
     },
     async update<R extends Models.Row>(table: TableId, id: string, data: Data) {
       await get(table, id);
+      invalidateGym(gymId);
       const { gymId: _drop, ...rest } = data;
       return plain(await tables.updateRow<R>({ databaseId: DB_ID, tableId: table, rowId: id, data: rest as never }));
     },
     async remove(table: TableId, id: string) {
       await get(table, id);
+      invalidateGym(gymId);
       await tables.deleteRow({ databaseId: DB_ID, tableId: table, rowId: id });
     },
   };

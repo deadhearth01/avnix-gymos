@@ -2,15 +2,29 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "motion/react";
-import { ChevronsUpDown, Compass, PanelLeftClose, PanelLeft, Search, LifeBuoy, LogOut, ShieldCheck, Check, Volume2, Sparkles } from "@/components/icons";
+import {
+  BookOpen,
+  ChevronsUpDown,
+  Compass,
+  PanelLeftClose,
+  PanelLeft,
+  Search,
+  LifeBuoy,
+  LogOut,
+  ShieldCheck,
+  Check,
+  Volume2,
+  Sparkles,
+} from "@/components/icons";
 import { AnimatedIcon } from "@/components/kit/animated-icon";
 import { LogoTile } from "@/components/brand/logo";
 import { PersonAvatar } from "@/components/kit/person-avatar";
 import { ThemeSwitch } from "@/components/shell/theme-switch";
 import { useCommandPalette } from "@/components/shell/command-palette";
 import { startTour } from "@/components/shell/onboarding-tour";
+import { defaultLogoFor, isDefaultLogoUrl, presetUrl } from "@/lib/site/presets";
 import type { NavItem } from "@/components/shell/nav-config";
 import {
   DropdownMenu,
@@ -103,7 +117,7 @@ export function Sidebar(props: SidebarProps) {
                 <DropdownMenuLabel className="text-xs text-muted-foreground">Your gyms</DropdownMenuLabel>
                 {switcher.map((g) => (
                   <DropdownMenuItem key={g.id} onSelect={() => !g.active && onSwitch?.(g.id)}>
-                    <BrandMark name={g.name} size={22} />
+                    <BrandMark name={g.name} seed={g.id} size={22} />
                     <span className="flex-1 truncate">{g.name}</span>
                     {g.active && <Check className="size-4 text-primary" />}
                   </DropdownMenuItem>
@@ -193,6 +207,25 @@ export function Sidebar(props: SidebarProps) {
           <ThemeSwitch collapsed={c} />
         </div>
         <ul className="flex flex-col gap-0.5">
+          {variant === "gym" && (
+            <li data-tour="nav-guide">
+              <button
+                type="button"
+                onClick={() => {
+                  onNavigate?.();
+                  startTour();
+                }}
+                className={cn(
+                  "anim-host flex h-9 w-full items-center gap-2.5 rounded-[10px] px-2.5 text-sm font-medium text-sidebar-foreground/85 transition-colors hover:bg-muted hover:text-foreground",
+                  c && "justify-center px-0",
+                )}
+                aria-label="Open the guide"
+              >
+                <AnimatedIcon icon={BookOpen} className="size-[18px]" />
+                {!c && <span className="flex-1 text-left">Guide</span>}
+              </button>
+            </li>
+          )}
           <NavLink
             item={{ href: "mailto:support@avnix.in?subject=GymOS%20support", label: "Support", icon: LifeBuoy }}
             active={false}
@@ -245,7 +278,7 @@ export function Sidebar(props: SidebarProps) {
             <DropdownMenuSeparator />
             {variant === "gym" && (
               <DropdownMenuItem onSelect={() => window.setTimeout(startTour, 150)}>
-                <Compass className="size-4" /> Take the tour
+                <Compass className="size-4" /> Open the guide
               </DropdownMenuItem>
             )}
             <DropdownMenuItem variant="destructive" onSelect={() => void signOut()}>
@@ -275,6 +308,14 @@ function NavLink({
   onNavigate?: () => void;
   layoutGroup: string;
 }) {
+  const router = useRouter();
+  // Prefetch on intent (hover/focus), not on render — warms the browser cache without flooding the server.
+  const warmedAt = React.useRef(0);
+  const warm = () => {
+    if (external || active || performance.now() - warmedAt.current < 60_000) return;
+    warmedAt.current = performance.now();
+    router.prefetch(item.href);
+  };
   const content = (
     <>
       {active && (
@@ -318,7 +359,7 @@ function NavLink({
       {content}
     </a>
   ) : (
-    <Link href={item.href} className={cls} aria-current={active ? "page" : undefined} onClick={onNavigate}>
+    <Link href={item.href} prefetch={false} className={cls} aria-current={active ? "page" : undefined} onClick={onNavigate} onMouseEnter={warm} onFocus={warm}>
       {content}
     </Link>
   );
@@ -349,12 +390,29 @@ export async function signOut() {
   }
 }
 
-export function BrandMark({ name, logoUrl, color, size = 32 }: { name: string; logoUrl?: string | null; color?: string | null; size?: number }) {
-  if (logoUrl) {
-    // eslint-disable-next-line @next/next/no-img-element
+/**
+ * A gym's mark: its uploaded logo, or an illustrated default icon on a tile tinted with its brand colour.
+ * `seed` (the gym id) keeps the default icon the same everywhere the gym appears.
+ */
+export function BrandMark({
+  name,
+  logoUrl,
+  color,
+  size = 32,
+  seed,
+}: {
+  name: string;
+  logoUrl?: string | null;
+  color?: string | null;
+  size?: number;
+  seed?: string;
+}) {
+  const src = logoUrl || presetUrl(defaultLogoFor(seed || name || "gym"));
+  if (src && !isDefaultLogoUrl(src)) {
     return (
+      // eslint-disable-next-line @next/next/no-img-element
       <img
-        src={logoUrl}
+        src={src}
         alt=""
         width={size}
         height={size}
@@ -363,17 +421,15 @@ export function BrandMark({ name, logoUrl, color, size = 32 }: { name: string; l
       />
     );
   }
+  const brand = color || "var(--primary)";
   return (
     <span
-      className="grid shrink-0 place-items-center rounded-[9px] font-semibold text-white shadow-[inset_0_1px_0_rgb(255_255_255/0.25)]"
-      style={{
-        width: size,
-        height: size,
-        fontSize: size * 0.42,
-        background: `linear-gradient(145deg, ${color || "#16a34a"}, color-mix(in oklab, ${color || "#16a34a"} 70%, black))`,
-      }}
+      aria-hidden
+      className="grid shrink-0 place-items-center overflow-hidden rounded-[9px] ring-1 ring-black/5"
+      style={{ width: size, height: size, background: `color-mix(in oklab, ${brand} 22%, white)` }}
     >
-      {(name || "G").trim()[0]?.toUpperCase()}
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={src ?? undefined} alt="" width={size} height={size} className="size-[86%] object-contain" />
     </span>
   );
 }

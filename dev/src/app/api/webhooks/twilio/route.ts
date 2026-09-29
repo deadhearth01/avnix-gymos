@@ -3,6 +3,7 @@ import { Query } from "node-appwrite";
 import { adminClient } from "@/lib/appwrite/server";
 import { DB_ID, T } from "@/lib/appwrite/schema";
 import { env } from "@/lib/env";
+import { invalidateGym } from "@/lib/data/cache";
 import { verifyTwilioSignature } from "@/lib/messaging/twilio";
 
 const MAP: Record<string, string> = {
@@ -29,7 +30,7 @@ export async function POST(req: NextRequest) {
   if (!sid || !status) return new NextResponse(null, { status: 204 });
   const { tables } = adminClient();
   const r = await tables.listRows({ databaseId: DB_ID, tableId: T.messages, queries: [Query.equal("providerId", sid), Query.limit(1)] });
-  const row = r.rows[0] as unknown as { $id: string; status: string } | undefined;
+  const row = r.rows[0] as unknown as { $id: string; status: string; gymId: string } | undefined;
   const RANK: Record<string, number> = { queued: 0, sending: 1, sent: 2, delivered: 3, read: 4 };
   const regress = status !== "failed" && (RANK[row?.status ?? ""] ?? -1) >= (RANK[status] ?? 0);
   if (row && !regress && row.status !== "read") {
@@ -42,6 +43,7 @@ export async function POST(req: NextRequest) {
         ...(status === "failed" ? { error: `${params.ErrorCode ?? ""} ${params.ErrorMessage ?? "Delivery failed"}`.trim().slice(0, 1000) } : {}),
       },
     });
+    invalidateGym(row.gymId);
   }
   return new NextResponse(null, { status: 204 });
 }

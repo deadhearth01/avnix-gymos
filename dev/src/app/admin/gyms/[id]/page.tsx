@@ -22,6 +22,7 @@ export default async function GymAdminPage({ params, searchParams }: PageProps<"
       subdomain={gymSubdomain(gym.slug)}
       gym={{
         id: gym.$id,
+        logoFileId: gym.logoFileId,
         name: gym.name,
         slug: gym.slug,
         city: gym.city,

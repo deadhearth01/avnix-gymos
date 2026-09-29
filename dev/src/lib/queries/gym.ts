@@ -5,6 +5,7 @@ import { T } from "@/lib/appwrite/schema";
 import { repo } from "@/lib/data/repo";
 import { dayKey } from "@/lib/domain/membership";
 import type { Automation, Checkin, Expense, Invoice, Lead, Member, Membership, Message, Payment, Plan } from "@/lib/types";
+import { cachedForGym } from "@/lib/data/cache";
 
 type Stat = Models.Row & { day: string; checkins: number; revenue: number; payments: number; newMembers: number; sales: number; leads: number };
 
@@ -13,7 +14,7 @@ const monthKey = (d: Date) => new Intl.DateTimeFormat("en-CA", { timeZone: TZ, y
 const monthLabel = (d: Date) => new Intl.DateTimeFormat("en-IN", { timeZone: TZ, month: "short" }).format(d).replace("Sept", "Sep");
 const dayLabel = (d: Date, opts: Intl.DateTimeFormatOptions) => new Intl.DateTimeFormat("en-IN", { timeZone: TZ, ...opts }).format(d).replace("Sept", "Sep");
 
-export async function dashboardData(gymId: string) {
+async function dashboardDataUncached(gymId: string) {
   const r = repo(gymId);
   const now = new Date();
   const iso = now.toISOString();
@@ -125,7 +126,7 @@ export async function dashboardData(gymId: string) {
   };
 }
 
-export async function listMembers(gymId: string) {
+async function listMembersUncached(gymId: string) {
   return repo(gymId).all<Member>(T.members, [Query.orderDesc("$createdAt")]);
 }
 
@@ -155,7 +156,7 @@ export async function memberProfile(gymId: string, memberId: string, opts: { bil
   return { member, memberships: memberships.rows, invoices: invoices.rows, payments: payments.rows, checkins: checkins.rows, messages: messages.rows };
 }
 
-export async function billingData(gymId: string) {
+async function billingDataUncached(gymId: string) {
   const r = repo(gymId);
   const [invoices, payments] = await Promise.all([
     r.all<Invoice>(T.invoices, [Query.orderDesc("issuedAt")], 3000),
@@ -164,11 +165,11 @@ export async function billingData(gymId: string) {
   return { invoices, payments };
 }
 
-export async function listLeads(gymId: string) {
+async function listLeadsUncached(gymId: string) {
   return repo(gymId).all<Lead>(T.leads, [Query.orderDesc("$createdAt")], 3000);
 }
 
-export async function automationsData(gymId: string) {
+async function automationsDataUncached(gymId: string) {
   const r = repo(gymId);
   const [automations, messages, counts] = await Promise.all([
     r.all<Automation>(T.automations),
@@ -178,7 +179,7 @@ export async function automationsData(gymId: string) {
   return { automations, messages: messages.rows, counts: Object.fromEntries(counts) as Record<string, number> };
 }
 
-export async function financeData(gymId: string) {
+async function financeDataUncached(gymId: string) {
   const r = repo(gymId);
   const now = new Date();
   const since = new Date(now.getFullYear(), now.getMonth() - 11, 1);
@@ -201,20 +202,54 @@ export async function financeData(gymId: string) {
   return { expenses, months };
 }
 
+/**
+ * Front-desk / palette search. Partial names ("prav"), several words in any order ("rao praveen"),
+ * phone fragments ("94516", "+91 94516") and member numbers ("140", "M140", "m0140") all work.
+ * (Appwrite full-text search only matches whole words, so names use `contains`.)
+ */
 export async function searchPeople(gymId: string, q: string) {
   const r = repo(gymId);
-  const term = q.trim().slice(0, 64);
+  const term = q.trim().replace(/\s+/g, " ").slice(0, 64);
+  if (!term) return [];
+  const lower = term.toLowerCase();
   const digits = term.replace(/\D/g, "");
-  const queries: Promise<{ rows: Member[] }>[] = [
-    r.list<Member>(T.members, [Query.search("name", term), Query.limit(8)], false).catch(() => ({ rows: [] as Member[] })),
-  ];
-  if (digits.length >= 3)
-    queries.push(r.list<Member>(T.members, [Query.contains("phone", digits), Query.limit(8)], false).catch(() => ({ rows: [] as Member[] })));
-  if (/^m\d+$/i.test(term))
-    queries.push(r.list<Member>(T.members, [Query.equal("code", term.toUpperCase()), Query.limit(2)], false).catch(() => ({ rows: [] as Member[] })));
+  const words = term
+    .split(" ")
+    .filter((w) => /\p{L}/u.test(w))
+    .slice(0, 3);
+  const codeNumber = /^m?\s*0*(\d{1,6})$/i.exec(term)?.[1];
+  const none = { rows: [] as Member[] };
+  const jobs: Promise<{ rows: Member[] }>[] = [];
+  if (words.length) jobs.push(r.list<Member>(T.members, [...words.map((w) => Query.contains("name", w)), Query.limit(40)], false).catch(() => none));
+  if (digits.length >= 3 && !words.length) jobs.push(r.list<Member>(T.members, [Query.contains("phone", digits), Query.limit(20)], false).catch(() => none));
+  if (codeNumber) jobs.push(r.list<Member>(T.members, [Query.equal("code", `M${codeNumber.padStart(4, "0")}`), Query.limit(1)], false).catch(() => none));
   const seen = new Set<string>();
-  return (await Promise.all(queries))
-    .flatMap((x) => x.rows)
-    .filter((m) => (seen.has(m.$id) ? false : (seen.add(m.$id), true)))
-    .slice(0, 8);
+  const found = (await Promise.all(jobs)).flatMap((x) => x.rows).filter((m) => (seen.has(m.$id) ? false : (seen.add(m.$id), true)));
+  const rank = (m: Member) => {
+    const name = m.name.toLowerCase();
+    if (codeNumber && m.code === `M${codeNumber.padStart(4, "0")}`) return 0;
+    if (name === lower) return 1;
+    if (name.startsWith(lower)) return 2;
+    if (name.split(" ").some((w) => w.startsWith(words[0]?.toLowerCase() ?? "\u0000"))) return 3;
+    return 4;
+  };
+  return found.sort((a, b) => rank(a) - rank(b) || a.name.localeCompare(b.name)).slice(0, 8);
 }
+
+/* ── cached entry points (expired on every write to the gym; see lib/data/cache) ── */
+export const dashboardData = cachedForGym("dashboard", dashboardDataUncached);
+export const listMembers = cachedForGym("members", listMembersUncached);
+export const billingData = cachedForGym("billing", billingDataUncached);
+export const listLeads = cachedForGym("leads", listLeadsUncached);
+export const automationsData = cachedForGym("automations", automationsDataUncached);
+export const financeData = cachedForGym("finance", financeDataUncached);
+export const sidebarCounts = cachedForGym("sidebar", async (gymId: string) => {
+  const r = repo(gymId);
+  const now = new Date().toISOString();
+  const [members, leads, outbox] = await Promise.all([
+    r.count(T.members, [Query.equal("status", "active"), Query.greaterThanEqual("expiresAt", now)]),
+    r.count(T.leads, [Query.equal("status", ["new", "contacted", "trial_booked", "trial_done"])]),
+    r.count(T.messages, [Query.equal("status", "queued")]),
+  ]);
+  return { members, leads, outbox };
+});

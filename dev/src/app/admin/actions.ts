@@ -30,6 +30,7 @@ import {
 } from "@/lib/services/platform";
 import type { Gym } from "@/lib/types";
 import { getPricing, planFor, savePricing, type Pricing } from "@/lib/services/pricing";
+import { isLogoPreset, isPreset } from "@/lib/site/presets";
 
 const zSid = (prefix: string) =>
   z
@@ -88,6 +89,7 @@ const createSchema = z.object({
   /** From /admin/pricing. Unless custom pricing is allowed and chosen, the plan's fees override the payload. */
   pricingPlanId: z.string().max(40).optional(),
   customPricing: z.boolean().default(false),
+  logoPreset: z.string().max(40).optional(),
 });
 export type CreateGymPayload = z.input<typeof createSchema>;
 
@@ -462,4 +464,19 @@ export async function savePricingAction(payload: z.input<typeof pricingSchema>) 
     revalidatePath("/admin/pricing");
     revalidatePath("/admin/gyms/new");
   }, "Pricing saved");
+}
+
+/** Super admin: switch a gym to one of the illustrated default logos. */
+export async function setGymLogoPresetAction(gymId: string, preset: string) {
+  return safe(async () => {
+    const { user } = await requireSuperAdmin();
+    if (!isLogoPreset(preset)) throw new UserError("Pick one of the icons.");
+    const { tables, storage } = adminClient();
+    const gym = await tables.getRow<Gym>({ databaseId: DB_ID, tableId: T.gyms, rowId: gymId });
+    if (gym.logoFileId && !isPreset(gym.logoFileId)) await storage.deleteFile({ bucketId: "gym-media", fileId: gym.logoFileId }).catch(() => {});
+    await tables.updateRow({ databaseId: DB_ID, tableId: T.gyms, rowId: gymId, data: { logoFileId: preset } });
+    await audit({ actor: user, action: "gym.logo", entity: "gym", entityId: gymId, summary: preset });
+    revalidatePath(`/admin/gyms/${gymId}`);
+    revalidatePath("/admin", "layout");
+  }, "Logo updated");
 }
