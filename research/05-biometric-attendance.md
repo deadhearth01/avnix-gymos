@@ -65,9 +65,9 @@ Small Windows tray app (Node + vendor SDK via FFI or the vendor’s local web se
 
 ## 3. Privacy & compliance (DPDP Act 2023)
 - Biometric data is personal data needing **explicit, informed consent** → consent checkbox + timestamp + staff name on enrolment; members can ask for deletion (one click).
-- Store the minimum: **embeddings only, no face photos**; fingerprint templates stay on the terminal (never reach GymOS).
+- Store the minimum: embeddings plus **one reference photo per Face ID** (taken at enrolment, private encrypted bucket, shown only to the gym's staff for verification); the kiosk stores nothing. Fingerprint templates stay on the terminal (never reach GymOS).
 - `face_profiles` and `devices` are private tables (API key only); punches are team-readable (IDs + names, no biometrics).
-- Deleting a member deletes their face profile.
+- Deleting a Face ID deletes the embeddings and the reference photo. Archived members can't check in; staff delete their Face ID from Members → Face IDs.
 
 ## 4. Build status (this phase)
 - [x] Schema: `devices`, `punches`, `face_profiles`; check-in methods `fingerprint`, `face`, `card`
@@ -77,3 +77,22 @@ Small Windows tray app (Node + vendor SDK via FFI or the vendor’s local web se
 - [x] Verified: simulated ZKTeco ATTLOG (fingerprint + face + unknown ID + replay), Hikvision multipart event, generic webhook (auth + batch), and headless Chrome with a fake camera: enrol 3 samples → kiosk recognised the member in ~3 s
 - [ ] GymOS Bridge (USB scanners, HTTP-only terminals, RTSP)
 - [ ] Push member list to ZKTeco devices (`DATA UPDATE USERINFO`) and Hikvision (`/ISAPI/AccessControl/UserInfo/Record`)
+
+## 5. Accuracy upgrade — ArcFace with 5-point alignment (Sep 2026)
+Human's built-in `faceres` / `faceres-deep` descriptors are HSE age/gender networks, not identity models. Measured on our test set (3 people × 8 augmentations — crop, dark, 8° tilt, blur, mirror, colour cast, low-quality JPEG — plus 10 faces from group photos), cosine similarity:
+
+| Model | same person (min) | different people (max) | gap |
+|---|---|---|---|
+| faceres-deep (Human) | 0.84 | 0.82 | 0.02 — unsafe |
+| InsightFace EfficientNet-B0, Human's own crop | 0.22 | 0.76 | overlap |
+| **InsightFace EfficientNet-B0, ArcFace 5-point aligned** | **0.82** | **0.66** | **0.16** |
+| InsightFace MobileNet-Swish, aligned | 0.75 | 0.71 | 0.04 |
+| InsightFace GhostNet, aligned | 0.76 | 0.73 | 0.03 |
+
+The 0.66 worst case is two look-alike generated men; unrelated faces sit around 0.28.
+
+- **Chosen**: InsightFace ArcFace EfficientNet-B0 (TFJS port, `vladmandic/insightface`, 13 MB, 512-d). Each face is warped with a least-squares similarity transform from FaceMesh points (eye centres, nose tip, mouth corners) onto ArcFace's standard 112×112 template before embedding.
+- **Matching**: cosine ≥ **0.70**, ≥ 0.08 ahead of the next member, and at least 2 of 3 kiosk readings must pick the same person. Duplicate check at enrolment uses the same threshold.
+- **End-to-end** (headless Chrome, fake camera): enrolled face → correct member at 0.98–1.00; a look-alike never enrolled → rejected (0.68); same face on a second member → refused as a duplicate.
+- Licence note: the model code is MIT; InsightFace's pretrained weights come from academic datasets (MS1M) whose terms are research-oriented — the same situation as most open face models. Revisit with a commercial SDK if a customer's legal team asks.
+- Profiles saved with the old model (`human-faceres-deep-3.3`) are ignored by the kiosk and flagged "Needs a new scan" in Members → Face IDs.

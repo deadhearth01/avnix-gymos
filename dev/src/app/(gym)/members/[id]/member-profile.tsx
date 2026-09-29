@@ -142,6 +142,7 @@ export function MemberProfile(p: Props) {
     p.initialAction === "renew" ? "sell" : p.initialAction === "collect" ? "collect" : p.initialAction === "card" ? "card" : null,
   );
   const [pending, start] = React.useTransition();
+  const [faceEnrolled, setFaceEnrolled] = React.useState(p.faceEnrolled);
 
   const done = (msg?: string) => {
     if (msg) notify.success(msg);
@@ -209,7 +210,7 @@ export function MemberProfile(p: Props) {
                 <AnimatedIcon icon={RefreshCw} /> {m.status === "none" ? "Start membership" : "Renew"}
               </Button>
             )}
-            <DropdownMenu>
+            <DropdownMenu modal={false}>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" size="icon" aria-label="More actions">
                   <MoreHorizontal />
@@ -221,7 +222,7 @@ export function MemberProfile(p: Props) {
                 </DropdownMenuItem>
                 {p.perms.edit && (
                   <DropdownMenuItem onSelect={() => setDialog("face")}>
-                    <ScanFace className="size-4" /> {p.faceEnrolled ? "Face ID · update" : "Set up Face ID"}
+                    <ScanFace className="size-4" /> {faceEnrolled ? "Face ID · update" : "Set up Face ID"}
                   </DropdownMenuItem>
                 )}
                 {p.perms.edit && (
@@ -369,7 +370,7 @@ export function MemberProfile(p: Props) {
               <Detail label="Trainer" value={m.trainerName} icon={Dumbbell} />
               <Detail
                 label="Device user ID"
-                value={m.code ? `${Number(m.code.replace(/\D/g, "")) || "—"}${p.faceEnrolled ? " · Face ID on" : ""}` : null}
+                value={m.code ? `${Number(m.code.replace(/\D/g, "")) || "—"}${faceEnrolled ? " · Face ID on" : ""}` : null}
                 icon={Fingerprint}
               />
               <Detail label="Language" value={{ en: "English", te: "తెలుగు", hi: "हिंदी" }[m.lang]} />
@@ -573,7 +574,14 @@ export function MemberProfile(p: Props) {
           streak: p.attendance.streak,
         }}
       />
-      <FaceEnrollDialog open={dialog === "face"} onClose={() => setDialog(null)} memberId={m.id} memberName={m.name} enrolled={p.faceEnrolled} onDone={done} />
+      <FaceEnrollDialog
+        open={dialog === "face"}
+        onClose={() => setDialog(null)}
+        memberId={m.id}
+        memberName={m.name}
+        enrolled={faceEnrolled}
+        onDone={setFaceEnrolled}
+      />
       <EditSheet key={`edit-${dialog === "edit"}`} open={dialog === "edit"} onClose={() => setDialog(null)} onDone={done} member={m} />
     </>
   );

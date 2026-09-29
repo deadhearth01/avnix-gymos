@@ -147,7 +147,12 @@ export function MembersView({
       header: "Last visit",
       hideBelow: "lg",
       sort: (r) => r.lastVisitAt ?? "",
-      cell: (r) => <span className={`text-sm ${r.idle ? "text-warning-ink" : "text-muted-foreground"}`}>{ago(r.lastVisitAt)}</span>,
+      cell: (r) => (
+        // relative time can tick over between the server render and hydration
+        <span suppressHydrationWarning className={`text-sm ${r.idle ? "text-warning-ink" : "text-muted-foreground"}`}>
+          {ago(r.lastVisitAt)}
+        </span>
+      ),
     },
     {
       id: "due",

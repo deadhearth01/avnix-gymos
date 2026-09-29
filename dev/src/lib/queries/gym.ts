@@ -3,8 +3,9 @@ import { addDays, subDays } from "date-fns";
 import { Query, type Models } from "node-appwrite";
 import { T } from "@/lib/appwrite/schema";
 import { repo } from "@/lib/data/repo";
-import { dayKey } from "@/lib/domain/membership";
-import type { Automation, Checkin, Expense, Invoice, Lead, Member, Membership, Message, Payment, Plan } from "@/lib/types";
+import { FACE_MODEL } from "@/lib/domain/face";
+import { dayKey, liveStatus, type LiveStatus } from "@/lib/domain/membership";
+import type { Automation, Checkin, Expense, FaceProfile, Invoice, Lead, Member, Membership, Message, Payment, Plan } from "@/lib/types";
 import { cachedForGym } from "@/lib/data/cache";
 
 type Stat = Models.Row & { day: string; checkins: number; revenue: number; payments: number; newMembers: number; sales: number; leads: number };
@@ -239,6 +240,66 @@ export async function searchPeople(gymId: string, q: string) {
 /* ── cached entry points (expired on every write to the gym; see lib/data/cache) ── */
 export const dashboardData = cachedForGym("dashboard", dashboardDataUncached);
 export const listMembers = cachedForGym("members", listMembersUncached);
+
+export type FaceIdRow = {
+  memberId: string;
+  name: string;
+  code: string | null;
+  status: LiveStatus;
+  enrolledAt: string;
+  enrolledBy: string | null;
+  /** photo version for the cache-busting ?v= on /api/face/photo (null → no reference photo). */
+  photo: string | null;
+  /** Saved with an older face model — the kiosk ignores it until it's scanned again. */
+  outdated: boolean;
+  faceCheckins: number;
+  lastFaceAt: string | null;
+};
+
+/** Everyone with a Face ID, with their reference photo and recent Face ID check-ins (last 30 days). */
+async function faceIdsUncached(gymId: string): Promise<FaceIdRow[]> {
+  const r = repo(gymId);
+  const [profiles, members, checkins] = await Promise.all([
+    r.all<FaceProfile>(T.faceProfiles, [Query.select(["$id", "$updatedAt", "memberId", "memberName", "model", "photoFileId", "consentAt", "consentBy"])]),
+    listMembers(gymId),
+    r.list<Checkin>(
+      T.checkins,
+      [
+        Query.equal("method", "face"),
+        Query.greaterThanEqual("at", subDays(new Date(), 30).toISOString()),
+        Query.select(["memberId", "at"]),
+        Query.orderDesc("at"),
+        Query.limit(5000),
+      ],
+      false,
+    ),
+  ]);
+  const byId = new Map(members.map((m) => [m.$id, m]));
+  const usage = new Map<string, { n: number; last: string }>();
+  for (const c of checkins.rows) {
+    const u = usage.get(c.memberId);
+    if (u) u.n++;
+    else usage.set(c.memberId, { n: 1, last: c.at });
+  }
+  return profiles
+    .map((p) => {
+      const m = byId.get(p.memberId);
+      return {
+        memberId: p.memberId,
+        name: m?.name ?? p.memberName ?? "Former member",
+        code: m?.code ?? null,
+        status: m ? liveStatus(m) : ("none" as LiveStatus),
+        enrolledAt: p.consentAt,
+        enrolledBy: p.consentBy,
+        photo: p.photoFileId,
+        outdated: p.model !== FACE_MODEL,
+        faceCheckins: usage.get(p.memberId)?.n ?? 0,
+        lastFaceAt: usage.get(p.memberId)?.last ?? null,
+      };
+    })
+    .sort((a, b) => b.enrolledAt.localeCompare(a.enrolledAt));
+}
+export const faceIdsData = cachedForGym("faceids", faceIdsUncached);
 export const billingData = cachedForGym("billing", billingDataUncached);
 export const listLeads = cachedForGym("leads", listLeadsUncached);
 export const automationsData = cachedForGym("automations", automationsDataUncached);

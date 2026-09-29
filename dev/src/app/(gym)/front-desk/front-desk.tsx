@@ -133,15 +133,34 @@ export function FrontDesk({
   const items = React.useMemo(() => (viewingToday ? today : (other?.items ?? [])), [viewingToday, today, other]);
   const shownTotal = viewingToday ? count : (other?.total ?? 0);
 
+  /** Add a check-in to today's list once (our own save and its realtime echo share the same id). */
+  const addToday = (item: TodayItem) => {
+    if (today.some((x) => x.id === item.id)) return;
+    setToday((xs) => (xs.some((x) => x.id === item.id) ? xs : [item, ...xs]));
+    setCount((c) => c + 1);
+  };
+
   useLiveEvents(["checkins"], (e) => {
     if (e.action !== "create") return;
     const r = e.row as { $id: string; memberId: string; memberName: string; at: string; method: string; by?: string | null };
-    setToday((xs) => {
-      if (xs.some((x) => x.id === r.$id)) return xs;
-      setCount((c) => c + 1);
-      return [{ id: r.$id, memberId: r.memberId, name: r.memberName, at: r.at, method: r.method, by: r.by ?? null }, ...xs];
-    });
+    addToday({ id: r.$id, memberId: r.memberId, name: r.memberName, at: r.at, method: r.method, by: r.by ?? null });
   });
+
+  // The browser may have served this page from its short-lived cache — refresh today's list once on open.
+  React.useEffect(() => {
+    let alive = true;
+    fetch(`/api/desk/day?day=${todayKey}`, { cache: "no-store" })
+      .then((r) => (r.ok ? (r.json() as Promise<{ items: TodayItem[]; total: number }>) : null))
+      .then((r) => {
+        if (!alive || !r) return;
+        setToday(r.items);
+        setCount(r.total);
+      })
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, [todayKey]);
 
   // No live connection? Refresh today's list every 30 s so the desk never goes stale.
   usePollWhenNotLive(async () => {
@@ -240,7 +259,10 @@ export function FrontDesk({
     try {
       const r = await checkInAction(m.id, method, override);
       if (!r.ok) return void notify.error(r.error);
-      showResult({ ...r.data!, name: m.name, memberId: m.id });
+      const d = r.data!;
+      if ("checkinId" in d && d.checkinId && !d.duplicate)
+        addToday({ id: d.checkinId, memberId: m.id, name: m.name, at: d.at ?? new Date().toISOString(), method, by: d.by ?? null });
+      showResult({ ...d, name: m.name, memberId: m.id });
       setQ("");
       setHitsFor({ term: "", rows: [] });
       inputRef.current?.focus();

@@ -241,6 +241,7 @@ export type FaceProfile = Row & {
   memberName: string | null;
   embeddings: string;
   model: string | null;
+  photoFileId: string | null;
   consentAt: string;
   consentBy: string | null;
 };

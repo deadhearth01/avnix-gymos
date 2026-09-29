@@ -527,6 +527,8 @@ export const TABLES: TableDef[] = [
       name128("memberName", false),
       { key: "embeddings", type: "text", required: true },
       { key: "model", type: "varchar", size: 32 },
+      // reference photo taken at enrolment (private member-photos bucket), for staff to verify
+      { key: "photoFileId", type: "varchar", size: 64 },
       dt("consentAt", true),
       name128("consentBy", false),
     ],

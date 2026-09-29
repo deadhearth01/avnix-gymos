@@ -439,22 +439,27 @@ async function unfreezeMemberLocked(gymId: string, memberId: string) {
 
 /* ─────────────────────────── check-ins ─────────────────────────── */
 
-/** Record a visit. `at` is the punch time for device logs that arrive late (defaults to now). One visit per hour. */
-export async function checkIn(gym: Gym, memberId: string, method: Checkin["method"], actor: Actor, at?: Date) {
+/**
+ * Record a visit. `at` is the punch time for device logs that arrive late (defaults to now). One visit per hour.
+ * Independent reads/writes run in parallel (a check-in used to be ~8 sequential round trips).
+ */
+export async function checkIn(gym: Gym, memberId: string, method: Checkin["method"], actor: Actor, at?: Date, known?: Member) {
   const r = repo(gym.$id);
-  const member = await r.get<Member>(T.members, memberId);
   const now = at ?? new Date();
   const hour = 60 * 60 * 1000;
-  const recent = await r.list<Checkin>(
-    T.checkins,
-    [
-      Query.equal("memberId", memberId),
-      Query.greaterThan("at", new Date(now.getTime() - hour).toISOString()),
-      Query.lessThan("at", new Date(now.getTime() + hour).toISOString()),
-      Query.limit(1),
-    ],
-    false,
-  );
+  const [member, recent] = await Promise.all([
+    known ?? r.get<Member>(T.members, memberId),
+    r.list<Checkin>(
+      T.checkins,
+      [
+        Query.equal("memberId", memberId),
+        Query.greaterThan("at", new Date(now.getTime() - hour).toISOString()),
+        Query.lessThan("at", new Date(now.getTime() + hour).toISOString()),
+        Query.limit(1),
+      ],
+      false,
+    ),
+  ]);
   if (recent.rows[0]) return { member, checkin: recent.rows[0], duplicate: true };
 
   const checkin = await r.create<Checkin>(T.checkins, {
@@ -466,18 +471,23 @@ export async function checkIn(gym: Gym, memberId: string, method: Checkin["metho
     by: actor.name,
   });
   const { tables } = adminClient();
-  await tables.incrementRowColumn({ databaseId: DB_ID, tableId: T.members, rowId: memberId, column: "visitCount", value: 1 });
-  const updated =
-    member.lastVisitAt && new Date(member.lastVisitAt) > now ? member : await r.update<Member>(T.members, memberId, { lastVisitAt: now.toISOString() });
-  await bumpStat(gym.$id, { checkins: 1 }, now);
-
-  // session-based plans consume a session per visit
-  if (member.membershipId) {
-    const ms = await r.find<Membership>(T.memberships, member.membershipId);
-    if (ms && ms.type !== "duration" && ms.sessionsTotal > 0 && ms.sessionsUsed < ms.sessionsTotal) {
-      await tables.incrementRowColumn({ databaseId: DB_ID, tableId: T.memberships, rowId: ms.$id, column: "sessionsUsed", value: 1, max: ms.sessionsTotal });
-    }
-  }
+  const newer = !member.lastVisitAt || new Date(member.lastVisitAt) <= now;
+  await Promise.all([
+    tables.incrementRowColumn({ databaseId: DB_ID, tableId: T.members, rowId: memberId, column: "visitCount", value: 1 }),
+    newer ? tables.updateRow({ databaseId: DB_ID, tableId: T.members, rowId: memberId, data: { lastVisitAt: now.toISOString() } }) : null,
+    bumpStat(gym.$id, { checkins: 1 }, now),
+    // session-based plans consume a session per visit
+    member.membershipId
+      ? r
+          .find<Membership>(T.memberships, member.membershipId)
+          .then((ms) =>
+            ms && ms.type !== "duration" && ms.sessionsTotal > 0 && ms.sessionsUsed < ms.sessionsTotal
+              ? tables.incrementRowColumn({ databaseId: DB_ID, tableId: T.memberships, rowId: ms.$id, column: "sessionsUsed", value: 1, max: ms.sessionsTotal })
+              : null,
+          )
+      : null,
+  ]);
+  const updated: Member = { ...member, visitCount: member.visitCount + 1, lastVisitAt: newer ? now.toISOString() : member.lastVisitAt };
   return { member: updated, checkin, duplicate: false };
 }
 

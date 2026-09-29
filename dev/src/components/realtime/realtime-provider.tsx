@@ -30,7 +30,13 @@ type SocketHolder = { realtime?: { socket?: WebSocket } };
  * (renewed every 12 min). Row permissions scope events to this gym's team.
  * Status comes from the socket itself, so the UI never claims "live" when it isn't.
  */
-export function RealtimeProvider({ getToken, children }: { getToken: TokenFn; children: React.ReactNode }) {
+const fetchToken: TokenFn = async () => {
+  const r = await fetch("/api/realtime/token", { cache: "no-store" });
+  if (!r.ok) throw new Error(`token ${r.status}`);
+  return (await r.json()) as Awaited<ReturnType<TokenFn>>;
+};
+
+export function RealtimeProvider({ getToken = fetchToken, children }: { getToken?: TokenFn; children: React.ReactNode }) {
   const listeners = React.useRef(new Set<Listener>());
   const [status, setStatus] = React.useState<LiveStatus>("connecting");
 

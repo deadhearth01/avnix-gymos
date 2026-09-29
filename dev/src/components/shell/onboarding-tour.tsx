@@ -250,6 +250,11 @@ function visible(selector: string) {
 
 /* ─────────────────────────── controller ─────────────────────────── */
 
+/** Fire-and-forget; survives navigation (keepalive) and never blocks the user's own actions. */
+const saveSeen = async (key: string) => {
+  await fetch("/api/me/tours", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ key }), keepalive: true });
+};
+
 /**
  * Guided onboarding with driver.js: a welcome screen on first login (take the tour or skip),
  * a page-by-page tour with "Skip tour" on every step, and a Guide panel to replay any chapter.
@@ -258,12 +263,12 @@ export function OnboardingTour({
   seen,
   enabled,
   firstName,
-  markSeen,
+  markSeen = saveSeen,
 }: {
   seen: string[];
   enabled: boolean;
   firstName: string;
-  markSeen: (key: string) => Promise<void>;
+  markSeen?: (key: string) => Promise<void>;
 }) {
   const pathname = usePathname();
   const router = useRouter();
@@ -276,9 +281,9 @@ export function OnboardingTour({
   const remember = React.useCallback(
     (key: string) => {
       setDone((d) => new Set(d).add(key));
-      void markSeen(key).catch(() => {});
+      if (enabled) void markSeen(key).catch(() => {});
     },
-    [markSeen],
+    [markSeen, enabled],
   );
 
   const start = React.useCallback(
@@ -371,7 +376,6 @@ export function OnboardingTour({
   }, [pathname, remember, router]);
 
   React.useEffect(() => {
-    if (!enabled) return;
     const t = window.setTimeout(() => void run(), 900); // let the page settle
     const onRun = () => void run();
     window.addEventListener("gymos:guide-run", onRun);
@@ -379,7 +383,7 @@ export function OnboardingTour({
       window.clearTimeout(t);
       window.removeEventListener("gymos:guide-run", onRun);
     };
-  }, [enabled, run]);
+  }, [run]);
 
   React.useEffect(() => {
     const open = () => setPanel(true);
@@ -389,7 +393,8 @@ export function OnboardingTour({
 
   React.useEffect(() => () => active.current?.destroy(), []);
 
-  if (!enabled) return null;
+  // `enabled` = the signed-in person's own workspace (not super-admin view): only then do we greet them
+  // automatically and remember progress. The Guide itself works everywhere.
   return (
     <>
       <Dialog

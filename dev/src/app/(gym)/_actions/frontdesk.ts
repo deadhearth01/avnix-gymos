@@ -1,6 +1,5 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
 import { requireCap } from "@/lib/auth/session";
 import { safe } from "@/lib/actions";
 import { checkIn } from "@/lib/services/gym";
@@ -9,6 +8,7 @@ import { CAN_ENTER, liveStatus } from "@/lib/domain/membership";
 import { repo } from "@/lib/data/repo";
 import { audit } from "@/lib/data/audit";
 import { T } from "@/lib/appwrite/schema";
+import { after } from "next/server";
 import { Query } from "node-appwrite";
 import type { Checkin, Member } from "@/lib/types";
 
@@ -61,25 +61,30 @@ export async function checkInAction(memberId: string, method: "manual" | "qr" | 
         visitCount: member.visitCount,
       };
     }
-    const r = await checkIn(ctx.gym, memberId, method, { $id: ctx.user.$id, name: ctx.user.name || ctx.user.email });
+    const r = await checkIn(ctx.gym, memberId, method, { $id: ctx.user.$id, name: ctx.user.name || ctx.user.email }, undefined, member);
     if (override)
-      await audit({
-        gymId: ctx.gymId,
-        actor: ctx.user,
-        action: "checkin.override",
-        entity: "member",
-        entityId: memberId,
-        summary: `${member.name} let in without a valid plan (${status})`,
-      });
-    revalidatePath("/front-desk");
+      after(() =>
+        audit({
+          gymId: ctx.gymId,
+          actor: ctx.user,
+          action: "checkin.override",
+          entity: "member",
+          entityId: memberId,
+          summary: `${member.name} let in without a valid plan (${status})`,
+        }),
+      );
+    // no revalidatePath: the desk updates itself (local insert + realtime), which keeps check-in instant
     return {
+      checkinId: r.checkin.$id,
+      at: r.checkin.at,
+      by: r.checkin.by,
       blocked: false,
       duplicate: r.duplicate,
       name: r.member.name,
       status: liveStatus(r.member),
       balanceDue: r.member.balanceDue,
       expiresAt: r.member.expiresAt,
-      visitCount: r.member.visitCount + (r.duplicate ? 0 : 1),
+      visitCount: r.member.visitCount,
     };
   });
 }

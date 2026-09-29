@@ -1,6 +1,5 @@
 import { requireCap } from "@/lib/auth/session";
 import { brandThemeCss } from "@/lib/brand-theme";
-import { identifyFaceAction } from "@/app/(gym)/_actions/devices";
 import { KioskView } from "./kiosk-view";
 
 export const metadata = { title: "Face ID kiosk" };
@@ -10,7 +9,7 @@ export default async function KioskPage() {
   return (
     <>
       <style dangerouslySetInnerHTML={{ __html: brandThemeCss(ctx.gym.brandColor) }} />
-      <KioskView gymName={ctx.gym.name} identify={identifyFaceAction} />
+      <KioskView gymName={ctx.gym.name} />
     </>
   );
 }

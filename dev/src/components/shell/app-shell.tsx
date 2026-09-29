@@ -18,12 +18,24 @@ type ShellProps = Omit<SidebarProps, "collapsed" | "onCollapsedChange" | "mobile
   initialCollapsed?: boolean;
   role?: StaffRole | null;
   search?: (q: string) => Promise<PaletteHit[]>;
+  /** GET endpoint for palette search (preferred over `search`: runs in parallel with the user's saves). */
+  searchUrl?: string;
   switchGym?: (id: string) => Promise<void>;
   impersonating?: { gymName: string; exit: () => Promise<void> } | null;
   children: React.ReactNode;
 };
 
-export function AppShell({ initialCollapsed = false, role, search, switchGym, impersonating, children, ...rest }: ShellProps) {
+export function AppShell({ initialCollapsed = false, role, search: searchFn, searchUrl, switchGym, impersonating, children, ...rest }: ShellProps) {
+  const search = React.useMemo(
+    () =>
+      searchUrl
+        ? async (q: string) => {
+            const r = await fetch(`${searchUrl}?q=${encodeURIComponent(q)}`, { cache: "no-store" });
+            return r.ok ? ((await r.json()) as PaletteHit[]) : [];
+          }
+        : searchFn,
+    [searchUrl, searchFn],
+  );
   const [collapsed, setCollapsed] = React.useState(initialCollapsed);
   const { resolvedTheme, setTheme } = useTheme();
   const sections = React.useMemo(

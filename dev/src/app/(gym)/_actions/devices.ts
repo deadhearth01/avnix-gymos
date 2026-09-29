@@ -1,5 +1,6 @@
 "use server";
 
+import { after } from "next/server";
 import { revalidatePath } from "next/cache";
 import { Query } from "node-appwrite";
 import { z } from "zod";
@@ -11,7 +12,19 @@ import { audit } from "@/lib/data/audit";
 import { rateLimit } from "@/lib/data/rate-limit";
 import { repo } from "@/lib/data/repo";
 import { liveStatus } from "@/lib/domain/membership";
-import { deleteFaceProfile, hashToken, identifyFace, newDeviceToken, recordPunch, saveFaceProfile, validEmbedding } from "@/lib/services/attendance";
+import {
+  cleanupFaceProfiles,
+  deleteFacePhoto,
+  deleteFaceProfile,
+  findFaceOwner,
+  hashToken,
+  identifyFace,
+  newDeviceToken,
+  recordPunch,
+  saveFacePhoto,
+  saveFaceProfile,
+  validEmbedding,
+} from "@/lib/services/attendance";
 import type { Device, Member } from "@/lib/types";
 
 const createSchema = z
@@ -90,23 +103,38 @@ export async function deleteDeviceAction(id: string) {
 
 /* ─────────────────────────── face ─────────────────────────── */
 
-export async function enrollFaceAction(memberId: string, embeddings: number[][], consent: boolean) {
+export async function enrollFaceAction(memberId: string, embeddings: number[][], consent: boolean, photo?: unknown) {
   return safe(async () => {
     const ctx = await requireCap("members.edit");
     if (!consent) throw new UserError("The member must agree before their face is saved.");
     if (!Array.isArray(embeddings) || embeddings.length < 2 || embeddings.length > 5 || !embeddings.every(validEmbedding))
       throw new UserError("We couldn't read the face clearly. Try again in better light.");
-    const member = await repo(ctx.gymId).get<Member>(T.members, memberId);
-    await saveFaceProfile(ctx.gym, member, embeddings, ctx.user.name || ctx.user.email);
-    await audit({
-      gymId: ctx.gymId,
-      actor: ctx.user,
-      action: "face.enroll",
-      entity: "member",
-      entityId: memberId,
-      summary: `Face ID for ${member.name} (consent recorded)`,
+    // the photo uploads while we check for duplicates; it's discarded if the face belongs to someone else
+    const [member, owner, photoId] = await Promise.all([
+      repo(ctx.gymId).get<Member>(T.members, memberId),
+      findFaceOwner(ctx.gymId, embeddings, memberId),
+      saveFacePhoto(memberId, photo).catch(() => null),
+    ]);
+    if (owner) {
+      after(() => deleteFacePhoto(photoId));
+      const other = await repo(ctx.gymId).find<Member>(T.members, owner.memberId);
+      throw new UserError(
+        `This face is already registered to ${other?.name ?? owner.name}${other?.code ? ` (${other.code})` : ""}. One person can have only one Face ID — delete it on their profile first if it was saved to the wrong member.`,
+      );
+    }
+    const { rowId, oldPhoto } = await saveFaceProfile(ctx.gym, member, embeddings, ctx.user.name || ctx.user.email, photoId);
+    // bookkeeping after the response, so saving feels instant
+    after(async () => {
+      await Promise.all([cleanupFaceProfiles(ctx.gymId, memberId, rowId).catch(() => {}), deleteFacePhoto(oldPhoto)]);
+      await audit({
+        gymId: ctx.gymId,
+        actor: ctx.user,
+        action: "face.enroll",
+        entity: "member",
+        entityId: memberId,
+        summary: `Face ID for ${member.name} (consent recorded)`,
+      });
     });
-    revalidatePath(`/members/${memberId}`);
   }, "Face ID saved");
 }
 
@@ -114,8 +142,7 @@ export async function deleteFaceAction(memberId: string) {
   return safe(async () => {
     const ctx = await requireCap("members.edit");
     const removed = await deleteFaceProfile(ctx.gymId, memberId);
-    if (removed) await audit({ gymId: ctx.gymId, actor: ctx.user, action: "face.delete", entity: "member", entityId: memberId });
-    revalidatePath(`/members/${memberId}`);
+    if (removed) after(() => audit({ gymId: ctx.gymId, actor: ctx.user, action: "face.delete", entity: "member", entityId: memberId }));
   }, "Face ID deleted");
 }
 
@@ -131,13 +158,14 @@ export type KioskResult =
       score: number;
     };
 
-/** Face kiosk: 1:N match on the server, then the same access policy as the front desk. */
-export async function identifyFaceAction(embedding: number[]) {
+/** Face kiosk: 1:N match on the server (several readings must agree), then the same access policy as the front desk. */
+export async function identifyFaceAction(input: number[][] | number[]) {
   return safe(async (): Promise<KioskResult> => {
     const ctx = await requireCap("checkins.create");
-    if (!validEmbedding(embedding)) throw new UserError("Face not clear enough.");
+    const readings = (Array.isArray(input[0]) ? input : [input]) as number[][];
+    if (!readings.length || readings.length > 5 || !readings.every(validEmbedding)) throw new UserError("Face not clear enough.");
     if (!(await rateLimit(`face:${ctx.gymId}`, 120, 60, { failClosed: true }))) throw new UserError("Too many attempts. Wait a moment.");
-    const match = await identifyFace(ctx.gymId, embedding);
+    const match = await identifyFace(ctx.gymId, readings);
     if (!match.memberId) return { state: "unknown", score: match.score };
     const result = await recordPunch({ gym: ctx.gym, device: null, memberId: match.memberId, at: new Date(), method: "face" });
     const member = await repo(ctx.gymId).get<Member>(T.members, match.memberId);

@@ -14,7 +14,7 @@ import { sidebarCounts } from "@/lib/queries/gym";
 import { Preloader } from "@/components/brand/preloader";
 import { OnboardingTour } from "@/components/shell/onboarding-tour";
 import type { Gym } from "@/lib/types";
-import { exitImpersonationAction, markTourSeenAction, realtimeTokenAction, searchAction, switchGymAction } from "./_actions/common";
+import { exitImpersonationAction, switchGymAction } from "./_actions/common";
 
 export default async function GymLayout({ children }: { children: React.ReactNode }) {
   const ctx = await getGymContext();
@@ -59,14 +59,14 @@ export default async function GymLayout({ children }: { children: React.ReactNod
       switchGym={switchGymAction}
       superAdmin={ctx.superAdmin}
       impersonating={ctx.impersonating ? { gymName: ctx.gym.name, exit: exitImpersonationAction } : null}
-      search={searchAction}
+      searchUrl="/api/palette/search"
       initialCollapsed={collapsed}
     >
       {/* gym brand colour → whole workspace (validated hex only) */}
       <style dangerouslySetInnerHTML={{ __html: brandThemeCss(ctx.gym.brandColor) }} />
       <Preloader />
-      <OnboardingTour seen={toursSeen} enabled={!ctx.impersonating} firstName={(ctx.user.name || "there").split(" ")[0]} markSeen={markTourSeenAction} />
-      <RealtimeProvider getToken={realtimeTokenAction}>
+      <OnboardingTour seen={toursSeen} enabled={!ctx.impersonating} firstName={(ctx.user.name || "there").split(" ")[0]} />
+      <RealtimeProvider>
         {mustChange && (
           <div className="mb-5 flex flex-col gap-3 rounded-2xl border border-primary/25 bg-primary/8 p-4 sm:flex-row sm:items-center print:hidden">
             <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-primary text-primary-foreground">

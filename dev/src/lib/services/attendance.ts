@@ -3,8 +3,11 @@ import "server-only";
 import { createHash, randomBytes } from "node:crypto";
 import { ID, Query } from "node-appwrite";
 import { adminClient, isAppwriteError } from "@/lib/appwrite/server";
-import { DB_ID, T } from "@/lib/appwrite/schema";
+import { InputFile } from "node-appwrite/file";
+import { BUCKETS, DB_ID, T } from "@/lib/appwrite/schema";
 import { repo, rowPermissions } from "@/lib/data/repo";
+import { invalidateGym } from "@/lib/data/cache";
+import { FACE_DIM, FACE_MODEL } from "@/lib/domain/face";
 import { CAN_ENTER, liveStatus } from "@/lib/domain/membership";
 import { checkIn } from "@/lib/services/gym";
 import type { Checkin, Device, FaceProfile, Gym, Member, Punch } from "@/lib/types";
@@ -136,22 +139,24 @@ export async function recordPunch(p: PunchInput): Promise<Punch["result"]> {
 
 /* ─────────────────────────── face recognition ─────────────────────────── */
 
-export const FACE_MODEL = "human-faceres-3.3";
-export const FACE_DIM = 1024;
-export const FACE_MATCH = 0.62;
-const FACE_MARGIN = 0.05;
+export { FACE_DIM, FACE_MODEL };
+/** Cosine similarity needed to call it the same person (tested: same person ≥ 0.82, look-alikes ≤ 0.66). */
+export const FACE_MATCH = 0.7;
+/** …and this far ahead of the next-closest member. */
+const FACE_MARGIN = 0.08;
 
-/** Same maths as @vladmandic/human `match.similarity` (order 2, multiplier 25, min 0.2, max 0.8). */
+/** Cosine similarity of two embeddings, 0…1 (negatives clamp to 0). */
 export function faceSimilarity(a: ArrayLike<number>, b: ArrayLike<number>) {
-  let sum = 0;
+  let dot = 0;
+  let na = 0;
+  let nb = 0;
   for (let i = 0; i < a.length; i++) {
-    const d = a[i] - b[i];
-    sum += d * d;
+    dot += a[i] * b[i];
+    na += a[i] * a[i];
+    nb += b[i] * b[i];
   }
-  const dist = Math.round(100 * 25 * sum) / 100;
-  if (dist === 0) return 1;
-  const norm = (1 - Math.sqrt(dist) / 100 - 0.2) / (0.8 - 0.2);
-  return Math.round(100 * Math.max(Math.min(norm, 1), 0)) / 100;
+  if (!na || !nb) return 0;
+  return Math.round(1000 * Math.max(0, dot / Math.sqrt(na * nb))) / 1000;
 }
 
 export function encodeEmbedding(v: number[]) {
@@ -167,7 +172,8 @@ export function validEmbedding(v: unknown): v is number[] {
 }
 
 type Gallery = { at: number; faces: { memberId: string; name: string; vecs: Float32Array[] }[] };
-const galleries = new Map<string, Gallery>();
+// shared across route bundles (see lib/data/cache.ts), so enrolling in one route refreshes the kiosk's route
+const galleries = ((globalThis as typeof globalThis & { __gymosFaces?: Map<string, Gallery> }).__gymosFaces ??= new Map<string, Gallery>());
 const GALLERY_TTL = 60_000;
 
 export function forgetGallery(gymId: string) {
@@ -182,10 +188,11 @@ async function gallery(gymId: string) {
   for (;;) {
     const page = await repo(gymId).list<FaceProfile>(
       T.faceProfiles,
-      [Query.limit(500), ...(cursor ? [Query.cursorAfter(cursor)] : []), Query.select(["$id", "memberId", "memberName", "embeddings"])],
+      [Query.limit(500), ...(cursor ? [Query.cursorAfter(cursor)] : []), Query.select(["$id", "memberId", "memberName", "embeddings", "model"])],
       false,
     );
     for (const row of page.rows) {
+      if (row.model !== FACE_MODEL) continue; // enrolled with an older model — must be re-enrolled
       try {
         const vecs = (JSON.parse(row.embeddings) as string[]).map(decodeEmbedding).filter((v) => v.length === FACE_DIM);
         if (vecs.length) faces.push({ memberId: row.memberId, name: row.memberName ?? "", vecs });
@@ -200,43 +207,134 @@ async function gallery(gymId: string) {
   return faces;
 }
 
-/** 1:N search across the gym's enrolled faces. Embeddings never leave the server. */
-export async function identifyFace(gymId: string, embedding: number[]) {
+/**
+ * 1:N search across the gym's enrolled faces. Embeddings never leave the server.
+ * Several readings (different frames) vote: a member is recognised only when at least two readings
+ * independently pick the same person with a clear lead over the next-closest member.
+ */
+export async function identifyFace(gymId: string, readings: number[][]) {
   const faces = await gallery(gymId);
-  let best = { memberId: "", name: "", score: 0 };
-  let second = 0;
-  for (const f of faces) {
-    const score = Math.max(...f.vecs.map((v) => faceSimilarity(embedding, v)));
-    if (score > best.score) {
-      second = best.score;
-      best = { memberId: f.memberId, name: f.name, score };
-    } else if (score > second) second = score;
+  const votes = new Map<string, { n: number; best: number; name: string }>();
+  let top = 0;
+  for (const e of readings) {
+    let best = { memberId: "", name: "", score: 0 };
+    let second = 0;
+    for (const f of faces) {
+      const sims = f.vecs.map((v) => faceSimilarity(e, v)).sort((a, b) => b - a);
+      // mean of the two closest samples: steadier than a single best frame
+      const score = sims.length > 1 ? (sims[0] + sims[1]) / 2 : sims[0];
+      if (score > best.score) {
+        second = best.score;
+        best = { memberId: f.memberId, name: f.name, score };
+      } else if (score > second) second = score;
+    }
+    top = Math.max(top, best.score);
+    if (best.score >= FACE_MATCH && best.score - second >= FACE_MARGIN) {
+      const v = votes.get(best.memberId) ?? { n: 0, best: 0, name: best.name };
+      v.n++;
+      v.best = Math.max(v.best, best.score);
+      votes.set(best.memberId, v);
+    }
   }
-  const matched = best.score >= FACE_MATCH && best.score - second >= FACE_MARGIN;
-  return { matched, memberId: matched ? best.memberId : null, score: best.score, enrolled: faces.length };
+  const needed = Math.min(2, readings.length);
+  const winner = [...votes.entries()].sort((a, b) => b[1].n - a[1].n || b[1].best - a[1].best)[0];
+  const matched = !!winner && winner[1].n >= needed && votes.size === 1;
+  return { matched, memberId: matched ? winner[0] : null, score: winner?.[1].best ?? top, enrolled: faces.length };
 }
 
-export async function saveFaceProfile(gym: Gym, member: Member, embeddings: number[][], consentBy: string) {
-  const r = repo(gym.$id);
-  const existing = (await r.list<FaceProfile>(T.faceProfiles, [Query.equal("memberId", member.$id), Query.limit(1)], false)).rows[0];
-  const data = {
-    memberId: member.$id,
-    memberName: member.name,
-    embeddings: JSON.stringify(embeddings.slice(0, 5).map(encodeEmbedding)),
-    model: FACE_MODEL,
-    consentAt: new Date().toISOString(),
-    consentBy,
-  };
-  if (existing) await r.update<FaceProfile>(T.faceProfiles, existing.$id, data);
-  else await r.create<FaceProfile>(T.faceProfiles, data, ID.unique());
+/** One row per member, written with a single upsert — re-enrolling replaces it (reuses an older row's id if present). */
+export async function saveFaceProfile(gym: Gym, member: Member, embeddings: number[][], consentBy: string, photoFileId: string | null) {
+  const { tables } = adminClient();
+  const existing = await repo(gym.$id).list<FaceProfile>(
+    T.faceProfiles,
+    [Query.equal("memberId", member.$id), Query.select(["$id", "photoFileId"]), Query.limit(1)],
+    false,
+  );
+  const rowId = existing.rows[0]?.$id ?? `face-${member.$id}`;
+  const oldPhoto = existing.rows[0]?.photoFileId;
+  await tables.upsertRow({
+    databaseId: DB_ID,
+    tableId: T.faceProfiles,
+    rowId,
+    data: {
+      gymId: gym.$id,
+      memberId: member.$id,
+      memberName: member.name,
+      embeddings: JSON.stringify(embeddings.slice(0, 5).map(encodeEmbedding)),
+      model: FACE_MODEL,
+      photoFileId,
+      consentAt: new Date().toISOString(),
+      consentBy,
+    },
+    permissions: [],
+  });
   forgetGallery(gym.$id);
+  invalidateGym(gym.$id);
+  return { rowId, oldPhoto: oldPhoto && oldPhoto !== photoFileId ? oldPhoto : null };
+}
+
+/**
+ * The enrolment reference photo (a JPEG data URL from the browser) → the private member-photos bucket.
+ * Nobody can read it directly; staff see it through /api/face/photo, which checks their session.
+ */
+export async function saveFacePhoto(memberId: string, dataUrl: unknown) {
+  const m = typeof dataUrl === "string" ? /^data:image\/jpeg;base64,([A-Za-z0-9+/=]+)$/.exec(dataUrl) : null;
+  if (!m) return null;
+  const buf = Buffer.from(m[1], "base64");
+  if (buf.length < 1500 || buf.length > 400_000 || buf[0] !== 0xff || buf[1] !== 0xd8) return null; // real JPEG, sane size
+  const { storage } = adminClient();
+  const f = await storage.createFile({
+    bucketId: BUCKETS.memberPhotos,
+    fileId: ID.unique(),
+    file: InputFile.fromBuffer(buf, `face-${memberId}.jpg`),
+    permissions: [],
+  });
+  return f.$id;
+}
+
+export async function deleteFacePhoto(fileId: string | null | undefined) {
+  if (!fileId) return;
+  await adminClient()
+    .storage.deleteFile({ bucketId: BUCKETS.memberPhotos, fileId })
+    .catch(() => {});
+}
+
+export async function facePhoto(fileId: string) {
+  const bytes = await adminClient().storage.getFileView({ bucketId: BUCKETS.memberPhotos, fileId });
+  return Buffer.from(bytes);
+}
+
+/** Remove older rows for this member (saved before profiles had a fixed id). */
+export async function cleanupFaceProfiles(gymId: string, memberId: string, keepId: string) {
+  const r = repo(gymId);
+  const rows = (await r.list<FaceProfile>(T.faceProfiles, [Query.equal("memberId", memberId), Query.notEqual("$id", keepId), Query.limit(10)], false)).rows;
+  await Promise.all(rows.map((x) => Promise.all([r.remove(T.faceProfiles, x.$id), deleteFacePhoto(x.photoFileId)])));
+}
+
+/**
+ * Is this face already enrolled for someone else at the gym? Compares every new sample with every
+ * enrolled face (except this member's own), so one person can't hold two Face IDs.
+ */
+export async function findFaceOwner(gymId: string, embeddings: number[][], excludeMemberId: string) {
+  const faces = await gallery(gymId);
+  let best: { memberId: string; name: string; score: number } | null = null;
+  for (const f of faces) {
+    if (f.memberId === excludeMemberId) continue;
+    for (const e of embeddings)
+      for (const v of f.vecs) {
+        const score = faceSimilarity(e, v);
+        if (score >= FACE_MATCH && (!best || score > best.score)) best = { memberId: f.memberId, name: f.name, score };
+      }
+  }
+  return best;
 }
 
 export async function deleteFaceProfile(gymId: string, memberId: string) {
   const r = repo(gymId);
   const rows = (await r.list<FaceProfile>(T.faceProfiles, [Query.equal("memberId", memberId), Query.limit(5)], false)).rows;
-  await Promise.all(rows.map((x) => r.remove(T.faceProfiles, x.$id)));
+  await Promise.all(rows.map((x) => Promise.all([r.remove(T.faceProfiles, x.$id), deleteFacePhoto(x.photoFileId)])));
   forgetGallery(gymId);
+  invalidateGym(gymId);
   return rows.length > 0;
 }
 

@@ -1,9 +1,10 @@
 import { requireCap } from "@/lib/auth/session";
 import { can } from "@/lib/auth/rbac";
-import { listMembers, listPlans } from "@/lib/queries/gym";
+import { faceIdsData, listMembers, listPlans } from "@/lib/queries/gym";
 import { toMemberRows } from "./rows";
 import { PageHeader } from "@/components/kit/page-header";
 import { LiveRefresh } from "@/components/realtime/realtime-provider";
+import { MembersTabs } from "./members-tabs";
 import { MembersView } from "./members-view";
 
 export const metadata = { title: "Members" };
@@ -11,7 +12,7 @@ export const metadata = { title: "Members" };
 export default async function MembersPage({ searchParams }: PageProps<"/members">) {
   const ctx = await requireCap("members.view");
   const sp = await searchParams;
-  const [members, plans] = await Promise.all([listMembers(ctx.gymId), listPlans(ctx.gymId)]);
+  const [members, plans, faces] = await Promise.all([listMembers(ctx.gymId), listPlans(ctx.gymId), faceIdsData(ctx.gymId)]);
   return (
     <>
       <LiveRefresh tables={["members"]} />
@@ -20,6 +21,7 @@ export default async function MembersPage({ searchParams }: PageProps<"/members"
         description="Everyone who trains with you — plans, dues and attendance at a glance."
         crumbs={[{ label: "Home", href: "/dashboard" }, { label: "Members" }]}
       />
+      <MembersTabs faceCount={faces.length} />
       <MembersView
         gymName={ctx.gym.name}
         gst={{ rate: ctx.gym.gstRate ?? 5, inclusive: ctx.gym.gstInclusive ?? true }}
